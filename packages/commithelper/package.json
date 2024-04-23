@@ -8,9 +8,7 @@
     },
     "scripts": {
         "build": "ncc build ./bin/index.ts -o dist --no-cache",
-        "test": "pnpm tsc -d -p tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js",
-        "deploy": "pnpm publish",
-        "version": "pnpm version"
+        "test": "pnpm tsc -d -p tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js"
     },
     "type": "module",
     "keywords": [],
