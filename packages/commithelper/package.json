@@ -1,0 +1,34 @@
+{
+    "name": "@naverpay/commithelper",
+    "version": "0.0.0",
+    "description": "help your commit in git",
+    "main": "./dist/index.js",
+    "bin": {
+        "commithelper": "./dist/index.js"
+    },
+    "scripts": {
+        "build": "ncc build ./bin/index.ts -o dist --no-cache",
+        "test": "pnpm tsc -d -p tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js",
+        "deploy": "pnpm publish",
+        "version": "pnpm version"
+    },
+    "type": "module",
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "jest": "^29.7.0",
+        "@vercel/ncc": "^0.38.1",
+        "typescript": "^5.2.2"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "dependencies": {
+        "cosmiconfig": "^8.3.6",
+        "meow": "^12.1.1"
+    },
+    "peerDependencies": {
+        "husky": "^8.0.3"
+    }
+}
