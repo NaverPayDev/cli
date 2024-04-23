@@ -1,10 +1,10 @@
 {
-    "name": "@naverpay/commithelper",
+    "name": "@naverpay/commit-helper",
     "version": "0.0.0",
     "description": "help your commit in git",
     "main": "./dist/index.js",
     "bin": {
-        "commithelper": "./dist/index.js"
+        "commit-helper": "./dist/index.js"
     },
     "scripts": {
         "build": "ncc build ./bin/index.ts -o dist --no-cache",

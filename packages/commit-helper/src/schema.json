@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "https://github.com/NaverPayDev/cli/packages/commithelper/src/schema.json",
+    "$id": "https://github.com/NaverPayDev/cli/packages/commit-helper/src/schema.json",
     "title": "Schema for .commithelperrc.json",
     "type": "object",
     "properties": {

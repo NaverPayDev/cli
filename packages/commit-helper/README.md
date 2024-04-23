@@ -1,4 +1,4 @@
-# @naverpay/commithelper
+# @naverpay/commit-helper
 
 [husky](https://typicode.github.io/husky/) 의 `commit-msg`훅을 기반으로, 커밋에 필요한 각 종 도구를 제공하는 cli 입니다.
 
@@ -7,7 +7,7 @@
 ### .husky/commit-msg
 
 ```
-npx --yes @naverpay/commithelper@latest $1
+npx --yes @naverpay/commit-helper@latest $1
 ```
 
 > `@latest`가 아니어도 상관없습니다만, `latest`라면 항상 최신버전을 사용하실 수 있습니다.
