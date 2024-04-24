@@ -11,6 +11,9 @@ importers:
       '@changesets/cli':
         specifier: ^2.26.2
         version: 2.27.1
+      '@naverpay/commit-helper':
+        specifier: workspace:*
+        version: link:packages/commit-helper
       '@naverpay/eslint-config':
         specifier: ^0.2.0
         version: 0.2.0(@babel/core@7.24.4)(@babel/eslint-parser@7.24.1)(@babel/plugin-proposal-class-properties@7.18.6)(@babel/plugin-transform-react-jsx@7.23.4)(@next/eslint-plugin-next@14.1.4)(@typescript-eslint/eslint-plugin@6.10.0)(@typescript-eslint/parser@6.21.0)(eslint-config-eslint@7.0.0)(eslint-config-prettier@9.1.0)(eslint-config-standard@17.1.0)(eslint-plugin-import@2.25.2)(eslint-plugin-jsx-a11y@6.8.0)(eslint-plugin-node@11.1.0)(eslint-plugin-promise@6.1.1)(eslint-plugin-react-hooks@4.6.0)(eslint-plugin-react@7.34.1)(eslint-plugin-unused-imports@3.1.0)(eslint@8.57.0)(prettier@2.8.8)
@@ -29,6 +32,9 @@ importers:
       glob:
         specifier: ^9.3.4
         version: 9.3.5
+      husky:
+        specifier: ^8.0.3
+        version: 8.0.3
       lint-staged:
         specifier: ^15.0.1
         version: 15.2.2
@@ -3873,7 +3879,6 @@ packages:
     resolution: {integrity: sha512-+dQSyqPh4x1hlO1swXBiNb2HzTDN1I2IGLQx1GrBuiqFJfoMrnZWwVmatvSiO+Iz8fBUnf+lekwNo4c2LlXItg==}
     engines: {node: '>=14'}
     hasBin: true
-    dev: false
 
   /iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
