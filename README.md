@@ -1,1 +1,1 @@
-## ts-monorepo-template
+## @naverpay/cli
