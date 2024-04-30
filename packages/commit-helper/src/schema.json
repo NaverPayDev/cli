@@ -4,6 +4,11 @@
     "title": "Schema for .commithelperrc.json",
     "type": "object",
     "properties": {
+        "extends": {
+            "type": "string",
+            "pattern": "^(http|https)://",
+            "description": "Extends remote URL"
+        },
         "protect": {
             "type": "array",
             "items": {
