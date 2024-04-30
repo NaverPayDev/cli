@@ -105,7 +105,7 @@ async function readExternalConfig(): Promise<{rules: Record<string, string | nul
     }
 
     try {
-        if (typeof searchedFor.config.extends === 'string' && searchedFor.config.extends.startsWith('https://')) {
+        if (/^(http|https):\/\//.test(searchedFor.config.extends)) {
             const extendsSrc = await fetch(searchedFor.config.extends)
             const extendsConfig = await extendsSrc.json()
 
