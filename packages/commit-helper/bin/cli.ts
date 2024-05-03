@@ -92,7 +92,7 @@ export function getCommitMessageByBranchName(
     return finalCommitMessage
 }
 
-function readExternalConfig(): {rules: Record<string, string | null>; protect: string[]} {
+async function readExternalConfig(): Promise<{rules: Record<string, string | null>; protect: string[]}> {
     const explorerSync = cosmiconfigSync('commithelper')
 
     const searchedFor = explorerSync.search()
@@ -104,6 +104,32 @@ function readExternalConfig(): {rules: Record<string, string | null>; protect: s
         }
     }
 
+    try {
+        if (/^(http|https):\/\//.test(searchedFor.config.extends)) {
+            const extendsSrc = await fetch(searchedFor.config.extends)
+            const extendsConfig = await extendsSrc.json()
+
+            let mergedProtect: string[] = []
+            let mergedRules = {}
+            if (Array.isArray(extendsConfig.protect)) {
+                mergedProtect = extendsConfig.protect
+            }
+            if (Array.isArray(searchedFor.config.protect)) {
+                mergedProtect = [...mergedProtect, searchedFor.config.protect]
+            }
+            if (typeof extendsConfig.rules === 'object') {
+                mergedRules = extendsConfig.rules
+            }
+            mergedRules = {...mergedRules, ...searchedFor.config.rules}
+
+            return {
+                protect: [...new Set(mergedProtect)],
+                rules: mergedRules,
+            }
+        }
+    } catch (e) {
+        throw new Error(`The extends value is not valid. ${e}`)
+    }
     return searchedFor.config
 }
 
@@ -129,7 +155,7 @@ export async function run() {
 
     const currentBranchName = (await getCurrentBranchName()).toLowerCase()
 
-    const {rules = {}, protect = []} = readExternalConfig()
+    const {rules = {}, protect = []} = await readExternalConfig()
 
     if (cli.flags.show) {
         /**
