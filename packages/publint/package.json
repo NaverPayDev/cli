@@ -1,0 +1,40 @@
+{
+    "name": "@naverpay/publint",
+    "version": "0.0.1",
+    "description": "",
+    "main": "dist/index.js",
+    "keywords": [],
+    "author": "yceffort <yceffort@gmail.com>",
+    "type": "module",
+    "license": "ISC",
+    "sideEffects": false,
+    "bin": {
+        "publint": "./dist/bin/cli.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/NaverPayDev/cli"
+    },
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": {
+            "require": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./package.json": "./package.json"
+    },
+    "scripts": {
+        "build": "tsup",
+        "test": "vitest run ./__tests__/verifyPackageJSON.test.ts"
+    },
+    "dependencies": {
+        "meow": "^13.2.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.12.12",
+        "tsup": "^8.2.4",
+        "vitest": "^2.0.5"
+    }
+}

@@ -1,0 +1,21 @@
+{
+    "name": "esm-typescript-no-import-types",
+    "version": "1.0.0",
+    "files": [
+        "index.mjs"
+    ],
+    "main": "./index.mjs",
+    "exports": {
+        ".": {
+            "import": "./index.mjs",
+            "require": {
+                "types": "./index.d.ts",
+                "default": "./index.js"
+            }
+        },
+        "./package.json": "./package.json"
+    },
+    "sideEffects": false,
+    "module": "./index.mjs",
+    "types": "./index.d.ts"
+}

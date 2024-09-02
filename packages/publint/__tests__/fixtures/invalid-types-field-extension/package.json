@@ -1,0 +1,19 @@
+{
+    "name": "invalid-types-field-extension",
+    "version": "1.0.0",
+    "main": "./index.js",
+    "files": [
+        "index.js"
+    ],
+    "sideEffects": false,
+    "types": "index.ts",
+    "exports": {
+        ".": {
+            "require": {
+                "types": "./index.d.ts",
+                "default": "./index.js"
+            }
+        },
+        "./package.json": "./package.json"
+    }
+}

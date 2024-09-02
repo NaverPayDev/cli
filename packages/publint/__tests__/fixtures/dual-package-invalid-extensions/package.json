@@ -1,0 +1,24 @@
+{
+    "name": "dual-package-invalid-extensions",
+    "version": "1.0.0",
+    "files": [
+        "index.js"
+    ],
+    "main": "./index.js",
+    "exports": {
+        ".": {
+            "require": {
+                "default": "./index.js",
+                "types": "./index.d.ts"
+            },
+            "import": {
+                "default": "./index.js",
+                "types": "./index.d.ts"
+            }
+        },
+        "./package.json": "./package.json"
+    },
+    "sideEffects": false,
+    "module": "./index.js",
+    "types": "./index.d.ts"
+}
