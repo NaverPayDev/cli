@@ -1,0 +1,26 @@
+{
+    "name": "valid-typescript-package",
+    "version": "1.0.0",
+    "files": [
+        "index.js",
+        "index.mjs",
+        "index.d.ts"
+    ],
+    "main": "./index.js",
+    "module": "./index.mjs",
+    "types": "./index.d.ts",
+    "exports": {
+        ".": {
+            "require": {
+                "types": "./index.d.ts",
+                "default": "./index.js"
+            },
+            "import": {
+                "types": "./index.d.ts",
+                "default": "./index.mjs"
+            }
+        },
+        "./package.json": "./package.json"
+    },
+    "sideEffects": false
+}

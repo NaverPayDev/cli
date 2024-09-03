@@ -1,0 +1,9 @@
+{
+    "name": "no-exports-field",
+    "version": "1.0.0",
+    "files": [
+        "index.js"
+    ],
+    "main": "./index.js",
+    "sideEffects": false
+}

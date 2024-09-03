@@ -1,0 +1,25 @@
+{
+    "name": "invalid-module-extension",
+    "version": "1.0.0",
+    "main": "./index.js",
+    "module": "./index.cjs",
+    "files": [
+        "index.cjs",
+        "index.mjs"
+    ],
+    "exports": {
+        ".": {
+            "require": {
+                "default": "./index.cjs",
+                "types": "./index.d.ts"
+            },
+            "import": {
+                "default": "./index.mjs",
+                "types": "./index.d.ts"
+            }
+        },
+        "./package.json": "./package.json"
+    },
+    "sideEffects": false,
+    "types": "./index.d.ts"
+}

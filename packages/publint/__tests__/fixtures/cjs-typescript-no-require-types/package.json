@@ -1,0 +1,17 @@
+{
+    "name": "cjs-typescript-no-require-types",
+    "version": "1.0.0",
+    "files": [
+        "index.js",
+        "index.d.ts"
+    ],
+    "main": "./index.js",
+    "types": "./index.d.ts",
+    "exports": {
+        ".": {
+            "require": "./index.js"
+        },
+        "./package.json": "./package.json"
+    },
+    "sideEffects": false
+}

@@ -1,0 +1,24 @@
+{
+    "name": "invalid-dual-typescript-import-types-extension",
+    "version": "1.0.0",
+    "main": "./index.js",
+    "module": "./index.mjs",
+    "types": "./index.d.ts",
+    "exports": {
+        ".": {
+            "require": {
+                "types": "./index.d.ts",
+                "default": "./index.js"
+            },
+            "import": {
+                "types": "./index.ts",
+                "default": "./index.mjs"
+            }
+        },
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "index.js"
+    ],
+    "sideEffects": false
+}

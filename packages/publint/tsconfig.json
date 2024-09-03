@@ -1,0 +1,32 @@
+{
+    "$schema": "http://json.schemastore.org/tsconfig",
+    "compilerOptions": {
+        "target": "es2021",
+        "jsx": "react",
+        "lib": ["dom", "es2021"],
+        "strict": true,
+        "allowJs": true,
+        "allowSyntheticDefaultImports": true,
+        "skipLibCheck": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "isolatedModules": true,
+        "preserveConstEnums": true,
+        "sourceMap": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "baseUrl": ".",
+        "declaration": true,
+        "emitDeclarationOnly": false,
+        "outDir": "./dist",
+        "declarationDir": "./dist",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "removeComments": false,
+        "typeRoots": ["./node_modules/@types"],
+        "types": ["node"],
+        "esModuleInterop": true
+    },
+    "include": ["./src", "__tests__", "./bin"],
+    "exclude": ["node_modules", "dist"]
+}

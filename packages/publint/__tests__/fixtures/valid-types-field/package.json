@@ -1,0 +1,15 @@
+{
+    "name": "valid-types-field",
+    "version": "1.0.0",
+    "main": "./index.js",
+    "types": "./index.d.ts",
+    "exports": {
+        ".": {
+            "require": {
+                "types": "./index.d.ts",
+                "default": "./index.js"
+            }
+        },
+        "./package.json": "./package.json"
+    }
+}

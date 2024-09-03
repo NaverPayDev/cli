@@ -1,0 +1,17 @@
+{
+    "name": "typescript-no-types",
+    "version": "1.0.0",
+    "files": [
+        "index.js"
+    ],
+    "main": "./index.js",
+    "exports": {
+        ".": {
+            "require": "./index.js",
+            "import": "./index.mjs"
+        },
+        "./package.json": "./package.json"
+    },
+    "sideEffects": false,
+    "module": "./index.mjs"
+}

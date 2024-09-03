@@ -1,0 +1,19 @@
+{
+    "name": "invalid-cjs-typescript-types-extension",
+    "version": "1.0.0",
+    "main": "./index.js",
+    "types": "./index.d.ts",
+    "exports": {
+        ".": {
+            "require": {
+                "types": "./index.ts",
+                "default": "./index.js"
+            }
+        },
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "index.js"
+    ],
+    "sideEffects": false
+}
