@@ -25,9 +25,24 @@ async function fetchAndPrune() {
 
 async function getMergedBranches() {
     try {
-        const branches = (await $`git branch --merged origin/main --merged origin/master | sed 's/^[* ]*//'`).stdout
+        let mergeCommand = 'git branch'
+
+        const mainExists = (await $`git show-ref --verify --quiet refs/remotes/origin/main`).exitCode === 0
+        const masterExists = (await $`git show-ref --verify --quiet refs/remotes/origin/master`).exitCode === 0
+
+        if (mainExists && masterExists) {
+            mergeCommand = "git branch --merged origin/main --merged origin/master | sed 's/^[* ]*//'"
+        } else if (mainExists) {
+            mergeCommand = "git branch --merged origin/main | sed 's/^[* ]*//'"
+        } else if (masterExists) {
+            mergeCommand = "git branch --merged origin/master | sed 's/^[* ]*//'"
+        }
+
+        const branches = (await $`${mergeCommand}`).stdout
             .split('\n')
             .filter(Boolean)
+            .filter((branch) => !defaultExclusions.includes(branch))
+
         return branches
     } catch (error) {
         console.error(chalk.red('Error fetching merged branches:'), error)
