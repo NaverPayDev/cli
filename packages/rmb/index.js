@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import chalk from 'chalk'
 import {minimatch} from 'minimatch'
 import {$, question} from 'zx'
 
@@ -17,7 +18,7 @@ function getExcludedBranches() {
 }
 
 async function fetchAndPrune() {
-    console.log('Fetching and pruning...')
+    console.log(chalk.cyan('Fetching and pruning...'))
     await $`git fetch --prune`
 }
 
@@ -28,7 +29,7 @@ async function getMergedBranches() {
             .filter(Boolean)
         return branches
     } catch (error) {
-        console.error('Error fetching merged branches:', error)
+        console.error(chalk.red('Error fetching merged branches:'), error)
         return []
     }
 }
@@ -39,7 +40,7 @@ function filterBranches(branches, patterns) {
 
 async function deleteBranches(branches) {
     if (!branches.length) {
-        console.log('No branches to delete.')
+        console.log(chalk.yellow('No branches to delete.'))
         return
     }
 
@@ -51,23 +52,25 @@ async function deleteBranches(branches) {
                 await $`git branch -d ${branch}`
                 deletedBranches.push(branch)
             } else {
-                const confirmation = (await question(`Delete branch ${branch}? (y/N): `)).trim().toLowerCase()
+                const confirmation = (await question(chalk.magenta(`Delete branch ${branch}? (y/N): `)))
+                    .trim()
+                    .toLowerCase()
                 if (confirmation === 'y') {
                     await $`git branch -d ${branch}`
                     deletedBranches.push(branch)
                 } else {
-                    console.log(`Skipped branch: ${branch}`)
+                    console.log(chalk.blue(`Skipped branch: ${branch}`))
                 }
             }
         } catch (error) {
-            console.error(`Error deleting branch ${branch}:`, error)
+            console.error(chalk.red(`Error deleting branch ${branch}:`), error)
         }
     }
 
     if (deletedBranches.length) {
-        console.log('Deleted branches:', deletedBranches.join(', '))
+        console.log(chalk.green('Deleted branches:'), deletedBranches.join(', '))
     } else {
-        console.log('No branches were deleted.')
+        console.log(chalk.yellow('No branches were deleted.'))
     }
 }
 
@@ -78,7 +81,7 @@ async function main() {
     const branchesToDelete = filterBranches(branches, excludedPatterns)
 
     if (!branchesToDelete.length) {
-        console.log('No branches to delete. All branches are either excluded or not merged.')
+        console.log(chalk.yellow('No branches to delete. All branches are either excluded or not merged.'))
         return
     }
 
