@@ -1,6 +1,6 @@
-# RMB - Remove Merged Branches
+# fmb - Fire (remove) Merged Branches
 
-`rmb` is a simple CLI tool for removing Git branches that have already been merged into `origin/main`.
+`fmb` is a simple CLI tool for removing Git branches that have already been merged into `origin/main`.
 
 ## Features
 
@@ -13,7 +13,7 @@
 ## Usage
 
 ```bash
-npx rmb [excluded-branches|glob-pattern] [--all]
+npx fmb [excluded-branches|glob-pattern] [--all]
 ```
 
 ### Examples
@@ -21,25 +21,25 @@ npx rmb [excluded-branches|glob-pattern] [--all]
 1. **Delete all merged branches except `main` and `master`:**
 
    ```bash
-   npx rmb
+   npx fmb
    ```
 
 2. **Exclude custom branches:**
 
    ```bash
-   npx rmb develop,canary
+   npx fmb develop,canary
    ```
 
 3. **Use Glob Patterns:**
 
    ```bash
-   npx rmb 'feature/*'
+   npx fmb 'feature/*'
    ```
 
 4. **Automatic Deletion Without Confirmation:**
 
    ```bash
-   npx rmb --all
+   npx fmb --all
    ```
 
 5. **Interactive Confirmation:**
