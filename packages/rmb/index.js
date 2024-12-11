@@ -8,7 +8,7 @@ import {$, question} from 'zx'
 const args = process.argv.slice(2)
 const shouldDeleteAll = args.includes('--all')
 
-const defaultExclusions = ['main', 'master']
+const defaultExclusions = ['main', 'master', 'develop']
 
 function getExcludedBranches() {
     const exclusions = args
