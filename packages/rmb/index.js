@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import {execSync} from 'child_process'
 
-import minimatch from 'minimatch'
+import {minimatch} from 'minimatch'
 
 const args = process.argv.slice(2)
 
