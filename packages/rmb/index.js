@@ -68,7 +68,7 @@ async function deleteBranches(branches) {
 
     for (const branch of branches) {
         try {
-            const cleanedBranch = branch.trim()
+            const cleanedBranch = branch.trim().replace(/'/g, "'")
             if (shouldDeleteAll) {
                 await $`git branch -d ${cleanedBranch}`
                 deletedBranches.push(cleanedBranch)
@@ -84,7 +84,7 @@ async function deleteBranches(branches) {
                 }
             }
         } catch (error) {
-            console.error(chalk.red(`Error deleting branch ${branch}:`), error)
+            console.error(chalk.red(`Error deleting branch ${branch.trim()}:`), error)
         }
     }
 
