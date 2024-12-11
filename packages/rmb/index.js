@@ -27,23 +27,25 @@ async function fetchAndPrune() {
 
 async function getMergedBranches() {
     try {
-        let mergeCommand = 'git branch'
+        const mergeCommands = []
 
-        const mainExists = (await $`git show-ref --verify --quiet refs/remotes/origin/main`).exitCode === 0
-        const masterExists = (await $`git show-ref --verify --quiet refs/remotes/origin/master`).exitCode === 0
-
-        if (mainExists && masterExists) {
-            mergeCommand = "git branch --merged origin/main --merged origin/master | sed 's/^[* ]*//'"
-        } else if (mainExists) {
-            mergeCommand = "git branch --merged origin/main | sed 's/^[* ]*//'"
-        } else if (masterExists) {
-            mergeCommand = "git branch --merged origin/master | sed 's/^[* ]*//'"
+        for (const branch of defaultExclusions) {
+            const branchExists = await $`git show-ref --verify refs/remotes/origin/${branch}`.quiet().catch(() => false)
+            if (branchExists) {
+                mergeCommands.push(['git', 'branch', '--merged', `origin/${branch}`])
+            }
         }
 
-        const branches = (await $`${mergeCommand}`).stdout
-            .split('\n')
+        if (mergeCommands.length === 0) {
+            console.error(chalk.red('None of the default branches exist on origin.'))
+            return []
+        }
+
+        const branches = (await Promise.all(mergeCommands.map((cmd) => $`${cmd}`.quiet())))
+            .flatMap((output) => output.stdout.split('\n'))
+            .map((branch) => branch.trim())
             .filter(Boolean)
-            .filter((branch) => !defaultExclusions.includes(branch))
+            .filter((branch) => !getExcludedBranches().includes(branch))
 
         return branches
     } catch (error) {
@@ -66,18 +68,19 @@ async function deleteBranches(branches) {
 
     for (const branch of branches) {
         try {
+            const cleanedBranch = branch.trim()
             if (shouldDeleteAll) {
-                await $`git branch -d ${branch}`
-                deletedBranches.push(branch)
+                await $`git branch -d ${cleanedBranch}`
+                deletedBranches.push(cleanedBranch)
             } else {
-                const confirmation = (await question(chalk.magenta(`Delete branch ${branch}? (y/N): `)))
+                const confirmation = (await question(chalk.magenta(`Delete branch ${cleanedBranch}? (y/N): `)))
                     .trim()
                     .toLowerCase()
                 if (confirmation === 'y') {
-                    await $`git branch -d ${branch}`
-                    deletedBranches.push(branch)
+                    await $`git branch -d ${cleanedBranch}`
+                    deletedBranches.push(cleanedBranch)
                 } else {
-                    console.log(chalk.blue(`Skipped branch: ${branch}`))
+                    console.log(chalk.blue(`Skipped branch: ${cleanedBranch}`))
                 }
             }
         } catch (error) {
