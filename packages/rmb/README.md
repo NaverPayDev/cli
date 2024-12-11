@@ -56,4 +56,3 @@ npx rmb [excluded-branches|glob-pattern] [--all]
 ## License
 
 MIT License © 2024 Naver Financial
-
