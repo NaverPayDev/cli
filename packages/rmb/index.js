@@ -1,72 +1,88 @@
 /* eslint-disable no-console */
-import {execSync} from 'child_process'
-
 import {minimatch} from 'minimatch'
+import {$, question} from 'zx'
 
 const args = process.argv.slice(2)
+const shouldDeleteAll = args.includes('--all')
 
 function getExcludedBranches() {
-    return args.length
-        ? args
-              .join(',')
-              .split(',')
-              .map((branch) => branch.trim())
-        : ['main', 'master']
+    const defaultExclusions = ['main', 'master']
+    const exclusions = args
+        .filter((arg) => arg !== '--all')
+        .join(',')
+        .split(',')
+        .map((branch) => branch.trim())
+        .filter(Boolean)
+    return [...new Set([...defaultExclusions, ...exclusions])]
 }
 
-function fetchAndPrune() {
+async function fetchAndPrune() {
     console.log('Fetching and pruning...')
-    execSync('git fetch --prune', {stdio: 'inherit'})
+    await $`git fetch --prune`
 }
 
-function getMergedBranches() {
-    const command = `git branch --merged origin/main | sed 's/^[* ]*//'`
+async function getMergedBranches() {
     try {
-        const branches = execSync(command, {encoding: 'utf-8'}).split('\n').filter(Boolean)
+        const branches = (await $`git branch --merged origin/main | sed 's/^[* ]*//'`).stdout
+            .split('\n')
+            .filter(Boolean)
         return branches
     } catch (error) {
-        console.error('Error fetching merged branches:', error.message)
+        console.error('Error fetching merged branches:', error)
         return []
     }
 }
 
 function filterBranches(branches, patterns) {
-    return branches.filter((branch) => patterns.some((pattern) => minimatch(branch, pattern)))
+    return branches.filter((branch) => !patterns.some((pattern) => minimatch(branch, pattern)))
 }
 
-function deleteBranches(branches) {
+async function deleteBranches(branches) {
     if (!branches.length) {
         console.log('No branches to delete.')
         return
     }
 
+    const deletedBranches = []
+
     for (const branch of branches) {
         try {
-            const confirmation = execSync(`read -p "Delete branch ${branch}? (y/N): " answer && echo $answer`, {
-                shell: '/bin/bash',
-                encoding: 'utf-8',
-            })
-                .trim()
-                .toLowerCase()
-
-            if (confirmation === 'y') {
-                execSync(`git branch -d ${branch}`, {stdio: 'inherit'})
-                console.log(`Deleted branch: ${branch}`)
+            if (shouldDeleteAll) {
+                await $`git branch -d ${branch}`
+                deletedBranches.push(branch)
             } else {
-                console.log(`Skipped branch: ${branch}`)
+                const confirmation = (await question(`Delete branch ${branch}? (y/N): `)).trim().toLowerCase()
+                if (confirmation === 'y') {
+                    await $`git branch -d ${branch}`
+                    deletedBranches.push(branch)
+                } else {
+                    console.log(`Skipped branch: ${branch}`)
+                }
             }
         } catch (error) {
-            console.error(`Error deleting branch ${branch}:`, error.message)
+            console.error(`Error deleting branch ${branch}:`, error)
         }
+    }
+
+    if (deletedBranches.length) {
+        console.log('Deleted branches:', deletedBranches.join(', '))
+    } else {
+        console.log('No branches were deleted.')
     }
 }
 
-function main() {
+async function main() {
     const excludedPatterns = getExcludedBranches()
-    fetchAndPrune()
-    const branches = getMergedBranches()
-    const branchesToDelete = branches.filter((branch) => !filterBranches([branch], excludedPatterns).length)
-    deleteBranches(branchesToDelete)
+    await fetchAndPrune()
+    const branches = await getMergedBranches()
+    const branchesToDelete = filterBranches(branches, excludedPatterns)
+
+    if (!branchesToDelete.length) {
+        console.log('No branches to delete. All branches are either excluded or not merged.')
+        return
+    }
+
+    await deleteBranches(branchesToDelete)
 }
 
 main()

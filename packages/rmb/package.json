@@ -20,6 +20,7 @@
     "author": "yc.effort@navercorp.com",
     "license": "MIT",
     "dependencies": {
-        "minimatch": "^10.0.1"
+        "minimatch": "^10.0.1",
+        "zx": "^8.2.4"
     }
 }
