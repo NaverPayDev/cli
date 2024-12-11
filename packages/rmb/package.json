@@ -1,0 +1,27 @@
+{
+    "name": "rmb",
+    "version": "0.0.0",
+    "description": "CLI tool to delete merged Git branches.",
+    "main": "index.js",
+    "type": "module",
+    "bin": {
+        "rmb": "index.js"
+    },
+    "scripts": {
+        "start": "node index.js"
+    },
+    "keywords": [
+        "git",
+        "cli",
+        "branches",
+        "delete",
+        "prune"
+    ],
+    "author": "yc.effort@navercorp.com",
+    "license": "MIT",
+    "dependencies": {
+        "chalk": "^5.3.0",
+        "minimatch": "^10.0.1",
+        "zx": "^8.2.4"
+    }
+}
