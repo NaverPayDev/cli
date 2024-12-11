@@ -6,8 +6,9 @@ import {$, question} from 'zx'
 const args = process.argv.slice(2)
 const shouldDeleteAll = args.includes('--all')
 
+const defaultExclusions = ['main', 'master']
+
 function getExcludedBranches() {
-    const defaultExclusions = ['main', 'master']
     const exclusions = args
         .filter((arg) => arg !== '--all')
         .join(',')
@@ -24,7 +25,7 @@ async function fetchAndPrune() {
 
 async function getMergedBranches() {
     try {
-        const branches = (await $`git branch --merged origin/main | sed 's/^[* ]*//'`).stdout
+        const branches = (await $`git branch --merged origin/main --merged origin/master | sed 's/^[* ]*//'`).stdout
             .split('\n')
             .filter(Boolean)
         return branches
