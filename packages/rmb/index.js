@@ -89,7 +89,8 @@ async function deleteBranches(branches) {
     }
 
     if (deletedBranches.length) {
-        console.log(chalk.green('Deleted branches:'), deletedBranches.join(', '))
+        console.log(chalk.green('Deleted branches:'))
+        deletedBranches.forEach((branch) => console.log(`  - ${chalk.bold(branch)}`))
     } else {
         console.log(chalk.yellow('No branches were deleted.'))
     }
