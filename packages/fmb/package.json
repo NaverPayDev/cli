@@ -1,11 +1,11 @@
 {
-    "name": "rmb",
+    "name": "fmb",
     "version": "0.0.1",
     "description": "CLI tool to delete merged Git branches.",
     "main": "index.js",
     "type": "module",
     "bin": {
-        "rmb": "index.js"
+        "fmb": "index.js"
     },
     "scripts": {
         "start": "node index.js"
