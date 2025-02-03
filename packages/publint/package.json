@@ -2,7 +2,7 @@
     "name": "@naverpay/publint",
     "version": "0.0.2",
     "description": "",
-    "main": "dist/index.js",
+    "main": "dist/src/index.js",
     "keywords": [],
     "author": "yceffort <yceffort@gmail.com>",
     "type": "module",
