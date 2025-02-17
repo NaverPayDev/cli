@@ -1,7 +1,7 @@
 import {NoExportsFieldError} from '../errors.js'
 import {IPackageJson, PackageType} from '../types/packageJSON.js'
 
-export function verifyPackageType(exports: IPackageJson['exports']): PackageType {
+export function verifyPackageType({exports, type}: IPackageJson): PackageType {
     let hasCjs = false
     let hasEsm = false
 
@@ -16,6 +16,9 @@ export function verifyPackageType(exports: IPackageJson['exports']): PackageType
             }
             if (exp.import) {
                 hasEsm = true
+            }
+            if (!exp.import && !exp.require && type) {
+                type === 'module' ? (hasEsm = true) : (hasCjs = true)
             }
         }
     })
