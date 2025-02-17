@@ -24,8 +24,10 @@ export function verifyExports(exports: IPackageJson['exports']): void {
             )
         }
 
-        if (!value.import && !value.require) {
-            throw new InvalidExportError(`"${key}"에 대한 export는 "import" 또는 "require" 필드를 포함해야 합니다`)
+        if (!value.import && !value.require && !value.default) {
+            throw new InvalidExportError(
+                `"${key}"에 대한 export는 "import", "require", "default" 중 하나 이상을 포함해야 합니다`,
+            )
         }
 
         if (value.import && typeof value.import !== 'string' && typeof value.import !== 'object') {
