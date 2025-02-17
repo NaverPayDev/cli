@@ -36,7 +36,7 @@ export function verifyPackageJSON(packageDir: string): PackageVerificationResult
         verifyRequiredFields(packageJSON)
 
         // 패키지 타입 확인 후 각 타입에 맞는 구조를 가지고 있는지 확인
-        const packageType = verifyPackageType(packageJSON.exports)
+        const packageType = verifyPackageType(packageJSON)
 
         // dual package 면 `module` 필드를 갖도록 선언
         verifyPackageStructure(packageJSON, packageType)
