@@ -1,5 +1,11 @@
 # @naverpay/publint
 
+## 0.0.5
+
+### Patch Changes
+
+-   31fd379: export import, require 없을 때 type 검사 추가
+
 ## 0.0.4
 
 ### Patch Changes
