@@ -21,7 +21,7 @@ interface PackageVerificationResult {
 
 export function verifyPackageJSON(packageDir: string): PackageVerificationResult {
     try {
-        // packagae.json 존재 여부 확인
+        // package.json 존재 여부 확인
         const packageJSONPath = path.join(packageDir, PACKAGE_JSON)
         if (!fs.existsSync(packageJSONPath)) {
             throw new NoPackageJsonError()
