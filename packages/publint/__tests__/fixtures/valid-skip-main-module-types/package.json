@@ -1,0 +1,20 @@
+{
+    "name": "valid-skip-main-module-types",
+    "version": "1.0.0",
+    "files": [
+        "*.js",
+        "*.d.ts"
+    ],
+    "exports": {
+        "./a": {
+            "import": "./a.js",
+            "types": "./a.d.ts"
+        },
+        "./b": {
+            "import": "./b.js",
+            "types": "./b.d.ts"
+        },
+        "./package.json": "./package.json"
+    },
+    "sideEffects": false
+}

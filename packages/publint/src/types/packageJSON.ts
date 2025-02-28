@@ -2,6 +2,7 @@ export interface ExportMap {
     require?: string | ConditionalExport
     import?: string | ConditionalExport
     default?: string
+    types?: string
 }
 
 interface ConditionalExport {
@@ -9,6 +10,7 @@ interface ConditionalExport {
     default?: string
 }
 
+/** @see https://json.schemastore.org/package */
 export interface IPackageJson {
     name: string
     version: string

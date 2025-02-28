@@ -1,6 +1,7 @@
 {
     "name": "no-files-field",
     "version": "1.0.0",
+    "type": "commonjs",
     "main": "./index.js",
     "exports": {
         ".": "./index.js",

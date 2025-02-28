@@ -22,7 +22,7 @@ const cli = meow(
 const directory = cli.input[0] || '.'
 
 try {
-    const result = verifyPackageJSON(directory)
+    const result = verifyPackageJSON({dir: directory})
     // eslint-disable-next-line no-console
     console.log('Package verification successful!')
     // eslint-disable-next-line no-console
