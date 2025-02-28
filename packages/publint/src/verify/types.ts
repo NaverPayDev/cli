@@ -10,7 +10,7 @@ export const verifyTypes = (packageJSON: IPackageJson) => {
         throw new TypescriptTypesFieldError()
     }
     if (!endsWithDTs(packageJSON.types)) {
-        throw new InvalidTypesFileError('types 필드')
+        throw new InvalidTypesFileError(`'types'`)
     }
     if (!packageJSON.types.startsWith('./')) {
         throw new InvalidPathError(packageJSON.types)

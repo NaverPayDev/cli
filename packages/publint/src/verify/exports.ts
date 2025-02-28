@@ -56,40 +56,38 @@ export function verifyExports(
         }
 
         if (typeof value !== 'object' || value === null) {
-            throw new InvalidExportError(
-                `"${key}"에 대한 export가 올바르지 않습니다: export는 객체 또는 문자열이어야 합니다`,
-            )
+            throw new InvalidExportError(`Export for the '${key}' is invalid. It must be an 'object' or a 'string'`)
         }
 
         if (!value.import && !value.require && !value.default) {
             throw new InvalidExportError(
-                `"${key}"에 대한 export는 "import", "require", "default" 중 하나 이상을 포함해야 합니다`,
+                `Export for the '${key}' must include at least one of 'import', 'require', or 'default'`,
             )
         }
 
         if (value.import && typeof value.import !== 'string' && typeof value.import !== 'object') {
-            throw new InvalidExportError(`"${key}"에 대한 "import" 필드가 올바르지 않습니다`)
+            throw new InvalidExportError(`The 'import' for '${key}' is invalid`)
         }
 
         if (value.require && typeof value.require !== 'string' && typeof value.require !== 'object') {
-            throw new InvalidExportError(`"${key}"에 대한 "require" 필드가 올바르지 않습니다`)
+            throw new InvalidExportError(`The 'require' for '${key}' is invalid`)
         }
 
         if (typeof value.import === 'object') {
             if (!value.import.default || typeof value.import.default !== 'string') {
-                throw new InvalidExportError(`"${key}"에 대한 "import.default" 필드가 올바르지 않습니다`)
+                throw new InvalidExportError(`The 'import.default' for '${key}' is invalid`)
             }
             if (value.import.types && typeof value.import.types !== 'string') {
-                throw new InvalidExportError(`"${key}"에 대한 "import.types" 필드가 올바르지 않습니다`)
+                throw new InvalidExportError(`The 'import.types' for '${key}' is invalid`)
             }
         }
 
         if (typeof value.require === 'object') {
             if (!value.require.default || typeof value.require.default !== 'string') {
-                throw new InvalidExportError(`"${key}"에 대한 "require.default" 필드가 올바르지 않습니다`)
+                throw new InvalidExportError(`The 'require.default' for '${key}' is invalid`)
             }
             if (value.require.types && typeof value.require.types !== 'string') {
-                throw new InvalidExportError(`"${key}"에 대한 "require.types" 필드가 올바르지 않습니다`)
+                throw new InvalidExportError(`The 'require.types' for '${key}' is invalid`)
             }
         }
     })
@@ -119,26 +117,26 @@ export function verifyExports(
             esmTypes = esmTypes || types
 
             if (cjsTypes && !endsWithDTs(cjsTypes)) {
-                throw new InvalidTypesFileError('exports["."].require.types 또는 최상위 types 필드')
+                throw new InvalidTypesFileError(`'exports["."].require.types' or the 'types'`)
             }
             if (esmTypes && !endsWithDTs(esmTypes)) {
-                throw new InvalidTypesFileError('exports["."].import.types 또는 최상위 types 필드')
+                throw new InvalidTypesFileError(`'exports["."].import.types' or the 'types'`)
             }
 
             switch (packageType) {
                 case 'cjs':
                     if (!cjsTypes) {
-                        throw new TypescriptExportMapError('CommonJS용 types 필드가 필요합니다.')
+                        throw new TypescriptExportMapError(`The 'types' for CJS is required`)
                     }
                     break
                 case 'esm':
                     if (!esmTypes) {
-                        throw new TypescriptExportMapError('ESM용 types 필드가 필요합니다.')
+                        throw new TypescriptExportMapError(`The 'types' for ESM is required`)
                     }
                     break
                 case 'dual':
                     if (!(cjsTypes && esmTypes)) {
-                        throw new TypescriptExportMapError('CommonJS와 ESM 모두를 위한 types 필드가 필요합니다.')
+                        throw new TypescriptExportMapError(`The 'types' for both CJS and ESM is required`)
                     }
                     break
             }
@@ -194,19 +192,17 @@ export function verifyExports(
     }
 
     if (packageType === 'esm' && cjsOutputPath && !esmOutputPath) {
-        throw new InvalidModuleTypeError('Package type is "module" but only CommonJS output is specified')
+        throw new InvalidModuleTypeError(`'type' is 'module' but only CJS output is specified`)
     }
     if (packageType !== 'esm' && esmOutputPath && !cjsOutputPath) {
-        throw new InvalidModuleTypeError('Package type is "commonjs" but only ES module output is specified')
+        throw new InvalidModuleTypeError(`'type' is 'commonjs' but only ESM output is specified`)
     }
 
     if (packageType === 'dual' && cjsOutputPath && esmOutputPath) {
         const cjsExt = path.extname(cjsOutputPath)
         const esmExt = path.extname(esmOutputPath)
         if (cjsExt === '.js' && esmExt === '.js') {
-            throw new InvalidFileExtensionError(
-                'Dual 패키지에서 CJS와 ESM 출력 파일은 서로 다른 확장자를 사용해야 합니다.',
-            )
+            throw new InvalidFileExtensionError(`Dual package CJS and ESM output files must have different extensions`)
         }
     }
 
@@ -219,10 +215,10 @@ export function verifyExports(
 
     if (writtenByTypescript) {
         if ((packageType === 'cjs' || packageType === 'dual') && !cjsTypes) {
-            throw new TypescriptExportMapError('CJS TypeScript 패키지는 export map에 require.types를 포함해야 합니다.')
+            throw new TypescriptExportMapError(`CJS TypeScript packages must include 'require.types' in the 'exports'`)
         }
         if ((packageType === 'esm' || packageType === 'dual') && !esmTypes) {
-            throw new TypescriptExportMapError('ESM TypeScript 패키지는 export map에 import.types를 포함해야 합니다.')
+            throw new TypescriptExportMapError(`ESM TypeScript packages must include 'import.types' in the 'exports'`)
         }
     }
 }
