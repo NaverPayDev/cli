@@ -127,3 +127,10 @@ export class MissingPackageJsonExportError extends Error {
         this.name = 'MissingPackageJsonExportError'
     }
 }
+
+export class UnknownPackageTypeError extends Error {
+    constructor() {
+        super('Unable to determine whether the package supports CJS, ESM, or dual formats.')
+        this.name = 'UnknownPackageTypeError'
+    }
+}

@@ -35,9 +35,9 @@ describe('verifyPackageJSON 함수 테스트', () => {
         const fixturePath = path.join(fixturesDir, fixtureName)
 
         if (ErrorType) {
-            expect(() => verifyPackageJSON(fixturePath)).toThrow(ErrorType)
+            expect(() => verifyPackageJSON({dir: fixturePath})).toThrow(ErrorType)
         } else {
-            expect(() => verifyPackageJSON(fixturePath)).not.toThrow()
+            expect(() => verifyPackageJSON({dir: fixturePath})).not.toThrow()
         }
     }
 

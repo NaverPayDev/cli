@@ -2,16 +2,25 @@ import fs from 'fs'
 import path from 'path'
 
 import {NoPackageJsonError} from './errors.js'
+import {getPackageType} from './packageType.js'
 import {IPackageJson} from './types/packageJSON.js'
 import {verifyExports} from './verify/exports.js'
-import {verifyOutputPaths} from './verify/outputPaths.js'
-import {verifyPackageStructure} from './verify/packageStructure.js'
-import {verifyPackageType} from './verify/packageType.js'
-import {verifyRequiredFields} from './verify/requiredFields.js'
-import {verifyTypescriptPackage} from './verify/typescriptPackage.js'
+import {verifyFiles} from './verify/files.js'
+import {verifyMain} from './verify/main.js'
+import {verifyModule} from './verify/module.js'
+import {verifySideEffects} from './verify/sideEffects.js'
+import {verifyTypes} from './verify/types.js'
 
 const PACKAGE_JSON = 'package.json'
 const TSCONFIG_JSON = 'tsconfig.json'
+
+interface PackageVerificationParams {
+    dir: string
+    option?: {
+        /** 검사를 스킵할 필드 */
+        skip?: Partial<Booleanize<IPackageJson>>
+    }
+}
 
 interface PackageVerificationResult {
     writtenByTypescript: boolean
@@ -19,38 +28,39 @@ interface PackageVerificationResult {
     isDualPackage: boolean
 }
 
-export function verifyPackageJSON(packageDir: string): PackageVerificationResult {
+export function verifyPackageJSON({
+    dir,
+    option: {skip = {}} = {},
+}: PackageVerificationParams): PackageVerificationResult {
     try {
         // package.json 존재 여부 확인
-        const packageJSONPath = path.join(packageDir, PACKAGE_JSON)
+        const packageJSONPath = path.join(dir, PACKAGE_JSON)
         if (!fs.existsSync(packageJSONPath)) {
             throw new NoPackageJsonError()
         }
-
         const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf-8')) as IPackageJson
-
-        // exports 필드 검증
-        verifyExports(packageJSON.exports)
-
-        // 필수 필드 확인
-        verifyRequiredFields(packageJSON)
-
-        // 패키지 타입 확인 후 각 타입에 맞는 구조를 가지고 있는지 확인
-        const packageType = verifyPackageType(packageJSON)
-
-        // dual package 면 `module` 필드를 갖도록 선언
-        verifyPackageStructure(packageJSON, packageType)
-
         // TypeScript 패키지인 경우 타입 정의 파일이 있는지 확인
-        const tsConfigPath = path.join(packageDir, TSCONFIG_JSON)
-        const writtenByTypescript = fs.existsSync(tsConfigPath)
+        const writtenByTypescript = fs.existsSync(path.join(dir, TSCONFIG_JSON))
+        // 패키지 타입 확인 후 각 타입에 맞는 구조를 가지고 있는지 확인
+        const packageType = getPackageType(packageJSON)
 
-        if (writtenByTypescript) {
-            verifyTypescriptPackage(packageJSON, packageType)
-        }
+        // main
+        !skip.main && verifyMain(packageJSON)
 
-        // exports 필드에 정의된 출력 경로가 올바른지 확인
-        verifyOutputPaths(packageJSON, packageType, writtenByTypescript)
+        // types
+        !skip.types && writtenByTypescript && verifyTypes(packageJSON)
+
+        // sideEffects
+        !skip.sideEffects && verifySideEffects(packageJSON)
+
+        // files
+        !skip.files && verifyFiles(packageJSON)
+
+        // exports
+        !skip.exports && verifyExports(packageJSON, packageType, writtenByTypescript)
+
+        // module
+        !skip.module && verifyModule(packageJSON, packageType)
 
         return {
             writtenByTypescript,
