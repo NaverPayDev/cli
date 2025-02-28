@@ -31,13 +31,17 @@ describe('verifyPackageJSON 함수 테스트', () => {
         console.error = originalConsoleError
     })
 
-    const runTest = (fixtureName: string, ErrorType?: typeof PackageJsonError) => {
+    const runTest = (
+        fixtureName: string,
+        ErrorType?: typeof PackageJsonError,
+        option?: Parameters<typeof verifyPackageJSON>[number]['option'],
+    ) => {
         const fixturePath = path.join(fixturesDir, fixtureName)
 
         if (ErrorType) {
-            expect(() => verifyPackageJSON({dir: fixturePath})).toThrow(ErrorType)
+            expect(() => verifyPackageJSON({dir: fixturePath, option})).toThrow(ErrorType)
         } else {
-            expect(() => verifyPackageJSON({dir: fixturePath})).not.toThrow()
+            expect(() => verifyPackageJSON({dir: fixturePath, option})).not.toThrow()
         }
     }
 
@@ -145,11 +149,16 @@ describe('verifyPackageJSON 함수 테스트', () => {
             fixture: 'no-package-json-exports',
             error: MissingPackageJsonExportError,
         },
+        {
+            name: 'barrel file 없는 케이스에서 main, module, types 검사 skip',
+            fixture: 'valid-skip-main-module-types',
+            option: {skip: {main: true, module: true, types: true}},
+        },
     ]
 
-    testCases.forEach(({name, fixture, error}) => {
+    testCases.forEach(({name, fixture, error, option}) => {
         test(name, () => {
-            runTest(fixture, error)
+            runTest(fixture, error, option)
         })
     })
 })
