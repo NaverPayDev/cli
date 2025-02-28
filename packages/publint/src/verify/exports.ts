@@ -37,7 +37,7 @@ function isExportPath(value: any): value is ExportPath {
 }
 
 export function verifyExports(
-    {exports, types, type, module}: IPackageJson,
+    {exports, types, module}: IPackageJson,
     packageType: PackageType,
     writtenByTypescript: boolean,
 ): void {
@@ -151,8 +151,6 @@ export function verifyExports(
     let cjsTypes: string | undefined
     let esmTypes: string | undefined
 
-    const isESM = type === 'module'
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function traverseExports(obj: any) {
         for (const [key, value] of Object.entries(obj)) {
@@ -166,7 +164,7 @@ export function verifyExports(
                     cjsTypes = cjsTypes || validatedPath
                     esmTypes = esmTypes || validatedPath
                 } else if (!key.startsWith('.')) {
-                    if (isESM) {
+                    if (packageType === 'esm') {
                         esmOutputPath = esmOutputPath || validatedPath
                     } else {
                         cjsOutputPath = cjsOutputPath || validatedPath
@@ -195,10 +193,10 @@ export function verifyExports(
         traverseExports(exports)
     }
 
-    if (isESM && cjsOutputPath && !esmOutputPath) {
+    if (packageType === 'esm' && cjsOutputPath && !esmOutputPath) {
         throw new InvalidModuleTypeError('Package type is "module" but only CommonJS output is specified')
     }
-    if (!isESM && esmOutputPath && !cjsOutputPath) {
+    if (packageType !== 'esm' && esmOutputPath && !cjsOutputPath) {
         throw new InvalidModuleTypeError('Package type is "commonjs" but only ES module output is specified')
     }
 

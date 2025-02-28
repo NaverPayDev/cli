@@ -4,6 +4,7 @@
     "files": [
         "index.js"
     ],
+    "type": "commonjs",
     "main": "./index.js",
     "exports": {
         ".": "./index.js",

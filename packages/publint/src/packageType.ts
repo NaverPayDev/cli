@@ -7,7 +7,7 @@ export function getPackageType({exports, type, main}: IPackageJson): PackageType
 
     if (!exports && !type && main) {
         hasCjs = true
-    } else {
+    } else if (type) {
         type === 'module' ? (hasEsm = true) : (hasCjs = true)
     }
 
