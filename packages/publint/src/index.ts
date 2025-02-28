@@ -32,46 +32,38 @@ export function verifyPackageJSON({
     dir,
     option: {skip = {}} = {},
 }: PackageVerificationParams): PackageVerificationResult {
-    try {
-        // package.json 존재 여부 확인
-        const packageJSONPath = path.join(dir, PACKAGE_JSON)
-        if (!fs.existsSync(packageJSONPath)) {
-            throw new NoPackageJsonError()
-        }
-        const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf-8')) as IPackageJson
-        // TypeScript 패키지인 경우 타입 정의 파일이 있는지 확인
-        const writtenByTypescript = fs.existsSync(path.join(dir, TSCONFIG_JSON))
-        // 패키지 타입 확인 후 각 타입에 맞는 구조를 가지고 있는지 확인
-        const packageType = getPackageType(packageJSON)
+    // package.json 존재 여부 확인
+    const packageJSONPath = path.join(dir, PACKAGE_JSON)
+    if (!fs.existsSync(packageJSONPath)) {
+        throw new NoPackageJsonError()
+    }
+    const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf-8')) as IPackageJson
+    // TypeScript 패키지인 경우 타입 정의 파일이 있는지 확인
+    const writtenByTypescript = fs.existsSync(path.join(dir, TSCONFIG_JSON))
+    // 패키지 타입 확인 후 각 타입에 맞는 구조를 가지고 있는지 확인
+    const packageType = getPackageType(packageJSON)
 
-        // main
-        !skip.main && verifyMain(packageJSON)
+    // main
+    !skip.main && verifyMain(packageJSON)
 
-        // types
-        !skip.types && writtenByTypescript && verifyTypes(packageJSON)
+    // types
+    !skip.types && writtenByTypescript && verifyTypes(packageJSON)
 
-        // sideEffects
-        !skip.sideEffects && verifySideEffects(packageJSON)
+    // sideEffects
+    !skip.sideEffects && verifySideEffects(packageJSON)
 
-        // files
-        !skip.files && verifyFiles(packageJSON)
+    // files
+    !skip.files && verifyFiles(packageJSON)
 
-        // exports
-        !skip.exports && verifyExports(packageJSON, packageType, writtenByTypescript)
+    // exports
+    !skip.exports && verifyExports(packageJSON, packageType, writtenByTypescript)
 
-        // module
-        !skip.module && verifyModule(packageJSON, packageType)
+    // module
+    !skip.module && verifyModule(packageJSON, packageType)
 
-        return {
-            writtenByTypescript,
-            packageJSON,
-            isDualPackage: packageType === 'dual',
-        }
-    } catch (error) {
-        if (error instanceof Error) {
-            // eslint-disable-next-line no-console
-            console.error(`Package.json 검증 실패: ${error.message}`)
-        }
-        throw error
+    return {
+        writtenByTypescript,
+        packageJSON,
+        isDualPackage: packageType === 'dual',
     }
 }
