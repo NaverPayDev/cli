@@ -1,8 +1,8 @@
 # @naverpay/publint
 
-## 0.1.0
+## 0.0.6
 
-### Minor Changes
+### Patch Changes
 
 -   8701371: 
     -   에러 메시지 글로벌화
