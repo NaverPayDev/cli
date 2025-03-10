@@ -1,5 +1,13 @@
 # @naverpay/publint
 
+## 0.0.6
+
+### Patch Changes
+
+-   8701371: 
+    -   에러 메시지 글로벌화
+    -   에러 로깅 제거
+
 ## 0.0.5
 
 ### Patch Changes
