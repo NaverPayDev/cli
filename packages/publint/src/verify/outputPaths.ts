@@ -100,9 +100,7 @@ export function verifyOutputPaths(
         const cjsExt = path.extname(cjsOutputPath)
         const esmExt = path.extname(esmOutputPath)
         if (cjsExt === '.js' && esmExt === '.js') {
-            throw new InvalidFileExtensionError(
-                'Dual 패키지에서 CJS와 ESM 출력 파일은 서로 다른 확장자를 사용해야 합니다.',
-            )
+            throw new InvalidFileExtensionError('Dual package CJS and ESM output files must have different extensions')
         }
     }
 
@@ -115,10 +113,10 @@ export function verifyOutputPaths(
 
     if (writtenByTypescript) {
         if ((packageType === 'cjs' || packageType === 'dual') && !cjsTypes) {
-            throw new TypescriptExportMapError('CJS TypeScript 패키지는 export map에 require.types를 포함해야 합니다.')
+            throw new TypescriptExportMapError(`CJS TypeScript packages must include 'require.types' in the 'exports'`)
         }
         if ((packageType === 'esm' || packageType === 'dual') && !esmTypes) {
-            throw new TypescriptExportMapError('ESM TypeScript 패키지는 export map에 import.types를 포함해야 합니다.')
+            throw new TypescriptExportMapError(`ESM TypeScript packages must include 'import.types' in the 'exports'`)
         }
     }
 }
