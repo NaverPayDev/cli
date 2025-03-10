@@ -19,40 +19,38 @@ export function verifyExports(exports: IPackageJson['exports']): void {
         }
 
         if (typeof value !== 'object' || value === null) {
-            throw new InvalidExportError(
-                `"${key}"에 대한 export가 올바르지 않습니다: export는 객체 또는 문자열이어야 합니다`,
-            )
+            throw new InvalidExportError(`Export for the '${key}' is invalid. It must be an 'object' or a 'string'`)
         }
 
         if (!value.import && !value.require && !value.default) {
             throw new InvalidExportError(
-                `"${key}"에 대한 export는 "import", "require", "default" 중 하나 이상을 포함해야 합니다`,
+                `Export for the '${key}' must include at least one of 'import', 'require', or 'default'`,
             )
         }
 
         if (value.import && typeof value.import !== 'string' && typeof value.import !== 'object') {
-            throw new InvalidExportError(`"${key}"에 대한 "import" 필드가 올바르지 않습니다`)
+            throw new InvalidExportError(`The 'import' for '${key}' is invalid`)
         }
 
         if (value.require && typeof value.require !== 'string' && typeof value.require !== 'object') {
-            throw new InvalidExportError(`"${key}"에 대한 "require" 필드가 올바르지 않습니다`)
+            throw new InvalidExportError(`The 'require' for '${key}' is invalid`)
         }
 
         if (typeof value.import === 'object') {
             if (!value.import.default || typeof value.import.default !== 'string') {
-                throw new InvalidExportError(`"${key}"에 대한 "import.default" 필드가 올바르지 않습니다`)
+                throw new InvalidExportError(`The 'import.default' for '${key}' is invalid`)
             }
             if (value.import.types && typeof value.import.types !== 'string') {
-                throw new InvalidExportError(`"${key}"에 대한 "import.types" 필드가 올바르지 않습니다`)
+                throw new InvalidExportError(`The 'import.types' for '${key}' is invalid`)
             }
         }
 
         if (typeof value.require === 'object') {
             if (!value.require.default || typeof value.require.default !== 'string') {
-                throw new InvalidExportError(`"${key}"에 대한 "require.default" 필드가 올바르지 않습니다`)
+                throw new InvalidExportError(`The 'require.default' for '${key}' is invalid`)
             }
             if (value.require.types && typeof value.require.types !== 'string') {
-                throw new InvalidExportError(`"${key}"에 대한 "require.types" 필드가 올바르지 않습니다`)
+                throw new InvalidExportError(`The 'require.types' for '${key}' is invalid`)
             }
         }
     })
