@@ -134,7 +134,7 @@ async function readExternalConfig(): Promise<{rules: Record<string, string | nul
 }
 
 export function isStringMatchingPatterns(patternsArray: string[], stringToCheck: string) {
-    const patterns = [...DEFAULT_PROTECTED_BRANCHES, ...patternsArray]
+    const patterns = patternsArray && patternsArray.length > 0 ? patternsArray : DEFAULT_PROTECTED_BRANCHES
 
     return patterns.some((pattern) => {
         if (pattern.endsWith('/*')) {
