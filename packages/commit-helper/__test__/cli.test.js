@@ -67,9 +67,9 @@ describe('원하는 대로 커밋메시지를 잘 변조하는지 확인.', () =
 
 describe('', () => {
     it.each([
-        [[], 'main', true],
-        [[], 'master', true],
-        [[], 'develop', true],
+        [['main'], 'main', true],
+        [['master'], 'master', true],
+        [['develop'], 'develop', true],
         [['release/*'], 'release/123456', true],
         [['release/*'], 'release/123456', true],
         [['release/*'], 'release', false],
@@ -80,7 +80,7 @@ describe('', () => {
         [['epic/*'], 'epic_naverpay_yes', false],
         [['epic/*'], 'epic', false],
     ])('브랜치명 패턴 %s 에 "%s" 브랜치 매칭 여부 %s', (patterns, branchName, result) => {
-        const output = isStringMatchingPatterns(patterns, branchName)
+        const output = isStringMatchingPatterns(branchName, patterns)
         expect(output).toBe(result)
     })
 })
