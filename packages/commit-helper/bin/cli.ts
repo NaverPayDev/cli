@@ -92,49 +92,59 @@ export function getCommitMessageByBranchName(
     return finalCommitMessage
 }
 
-async function readExternalConfig(): Promise<{rules: Record<string, string | null>; protect: string[]}> {
-    const explorerSync = cosmiconfigSync('commithelper')
+interface Config {
+    rules: Record<string, string | null>
+    protect?: string[]
+}
 
+export async function readExternalConfig(): Promise<Config> {
+    const explorerSync = cosmiconfigSync('commithelper')
     const searchedFor = explorerSync.search()
 
     if (!searchedFor) {
-        return {
-            rules: {},
-            protect: [],
-        }
+        return {rules: {}}
     }
 
-    try {
-        if (/^(http|https):\/\//.test(searchedFor.config.extends)) {
-            const extendsSrc = await fetch(searchedFor.config.extends)
-            const extendsConfig = await extendsSrc.json()
+    const localConfig = searchedFor.config as Partial<Config & {extends?: string}>
 
-            let mergedProtect: string[] = []
-            let mergedRules = {}
+    const mergedRules: Record<string, string | null> = {...(localConfig.rules || {})}
+    let mergedProtect: string[] = Array.isArray(localConfig.protect) ? [...localConfig.protect] : []
+
+    const extendsUrl = localConfig.extends
+    if (typeof extendsUrl === 'string' && /^(http|https):\/\//.test(extendsUrl)) {
+        try {
+            const response = await fetch(extendsUrl)
+            if (!response.ok) {
+                throw new Error(`Failed to fetch extends config: ${response.status} ${response.statusText}`)
+            }
+
+            const extendsConfig = (await response.json()) as Partial<Config>
+
+            if (extendsConfig.rules && typeof extendsConfig.rules === 'object') {
+                Object.assign(mergedRules, extendsConfig.rules)
+            }
+
             if (Array.isArray(extendsConfig.protect)) {
-                mergedProtect = extendsConfig.protect
+                mergedProtect = [...extendsConfig.protect, ...mergedProtect]
             }
-            if (Array.isArray(searchedFor.config.protect)) {
-                mergedProtect = [...mergedProtect, searchedFor.config.protect]
-            }
-            if (typeof extendsConfig.rules === 'object') {
-                mergedRules = extendsConfig.rules
-            }
-            mergedRules = {...mergedRules, ...searchedFor.config.rules}
-
-            return {
-                protect: [...new Set(mergedProtect)],
-                rules: mergedRules,
-            }
+        } catch (e) {
+            throw new Error(`Failed to load external config from "${extendsUrl}": ${(e as Error).message}`)
         }
-    } catch (e) {
-        throw new Error(`The extends value is not valid. ${e}`)
     }
-    return searchedFor.config
+
+    const result: Config = {
+        rules: mergedRules,
+    }
+
+    if (mergedProtect.length > 0) {
+        result.protect = [...new Set(mergedProtect)]
+    }
+
+    return result
 }
 
-export function isStringMatchingPatterns(patternsArray: string[], stringToCheck: string) {
-    const patterns = patternsArray && patternsArray.length > 0 ? patternsArray : DEFAULT_PROTECTED_BRANCHES
+export function isStringMatchingPatterns(stringToCheck: string, patternsArray?: string[]) {
+    const patterns = patternsArray || DEFAULT_PROTECTED_BRANCHES
 
     return patterns.some((pattern) => {
         if (pattern.endsWith('/*')) {
@@ -155,7 +165,7 @@ export async function run() {
 
     const currentBranchName = (await getCurrentBranchName()).toLowerCase()
 
-    const {rules = {}, protect = []} = await readExternalConfig()
+    const {rules = {}, protect} = await readExternalConfig()
 
     if (cli.flags.show) {
         /**
@@ -179,7 +189,7 @@ export async function run() {
         throw new Error('Commit message is required.')
     }
 
-    const isProtectedBranch = isStringMatchingPatterns(protect, currentBranchName)
+    const isProtectedBranch = isStringMatchingPatterns(currentBranchName, protect)
 
     if (isProtectedBranch) {
         throw new Error(`You can't commit on this branch: ${currentBranchName}`)
