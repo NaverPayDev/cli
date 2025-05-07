@@ -1,11 +1,11 @@
-## Related Issue <!-- #뒤에 이슈번호 작성 -->
+## Related Issue <!-- Add issue number behind "#" sign -->
+
+- #
+
+## Describe your changes <!-- Please describe main difference by your pull request -->
 
 -
 
-## Describe your changes <!-- PR의 주요 작업 내용 작성 -->
-
--
-
-## Request <!-- 리뷰어 분들이 집중적으로 보셨으면 하는 내용 (참고할 내용) -->
+## Request <!-- Key points for reviewers to focus on (or helpful reference to understand your pull request) -->
 
 -
