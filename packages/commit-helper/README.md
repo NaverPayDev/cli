@@ -1,6 +1,6 @@
 # @naverpay/commit-helper
 
-[husky](https://typicode.github.io/husky/) 의 `commit-msg`훅을 기반으로, 커밋에 필요한 각 종 도구를 제공하는 cli 입니다.
+This CLI provides various tools which assist your commit based on [husky](https://typicode.github.io/husky/) `commit-msg` hook.
 
 ## How to use
 
@@ -10,11 +10,13 @@
 npx --yes @naverpay/commit-helper@latest $1
 ```
 
-> `@latest`가 아니어도 상관없습니다만, `latest`라면 항상 최신버전을 사용하실 수 있습니다.
+> `@latest` is not necessary but this option always provides latest version of commit-helper.
 
 ## what it does
 
-### 커밋에 이슈 태깅
+### Tag related issue
+
+> Automatically Add your related github issue number at your commit message through your branch name
 
 ```shell
 ➜  your-repo git:(feature/1) git add . &&  git commit -m ":memo: test"
@@ -25,36 +27,20 @@ feature/1
  1 file changed, 1 insertion(+)
 ```
 
-이제 커밋을 하면, `.commithelperrc.json`에 따라서 자동으로 이슈번호가 태깅됩니다.
+Your issue number is automatically tagged base on your setting (`.commithelperrc.json`)
 
-#### 사용자화
+### Blocking commit
 
-만약 사전에 정의된 규칙외에 레포에 특별한 규칙을 넣고 싶으시다면, [cosmicconfig](https://github.com/cosmiconfig/cosmiconfig) 규칙을 `commithelper`로 사용해주세요. `cosmicconfig`는 `eslint` `prettier` 등지에서 널리 사용되는 `rc` 설정을 읽어서 사용하는 라이브러리로, `commithelper`도 `cosmicconfig`를 사용합니다. 그리고 사전에 정의된 규칙과 충돌이 있다면 `cosmicconfig`를 우선합니다.
+- Blocks direct commit toward `main`, `develop` `master` branch by throwing error on commit attempt.
+- To block specific branches, add at `protect` field on `commithelperrc`.
 
-#### `.commithelperrc.json`
+#### Customization
 
-```json
-{
-    "rules": {
-        "feature": null,
-        "qa": "your-org/your-repo"
-    }
-}
-```
-
-> 위와 같이 있다면,
->
-> - `feature/1`은 `[#1]` 로 태깅됩니다.
-> - `qa/1`은 `[your-org/your-repo#1]`로 태깅됩니다.
-
-### 커밋 방지
-
-- `main`, `develop` `master` 브랜치에 직접적으로 하는 것을 방지하며, `main`, `develop` `master` 브랜치에 커밋을 하려고 하면 에러를 발생시킵니다.
-- 이외에 다른 브랜치를 막고 싶다면, `commithelperrc` 의 `protect`필드를 추가해주세요.
+If you need to add customized commit rule, use [cosmiconfig](https://github.com/cosmiconfig/cosmiconfig) rules as `commithelper`. `cosmiconfig` is a library widely used in tools like `eslint` and `prettier` to read `rc` configuration files. `commithelper` also uses `cosmiconfig`. If there is any conflict with predefined rules, `cosmicconfig` takes precedence.
 
 ### commithelperrc
 
-`.commithelperrc`의 규칙은 다음과 같습니다.
+This is Basic rule of `.commithelperrc`.
 
 ```json
 {
@@ -68,20 +54,36 @@ feature/1
 
 #### rules
 
-- 키는 브랜치명 규칙입니다. `feature`를 키로 한다면, `feature/***` 네이밍의 브랜치들이 타겟이 됩니다.
-- 값은 해당 브랜치와 매칭할 레포명입니다. 예를 들어 'your-org/your-repo' 라고 값이 설정되어 있다면, 'your-org/your-repo#1' 로 연결됩니다.
-- 값이 만약 `null`이라면, 자기 저장소 자신을 태깅합니다. `feature`가 `null`이라면, 위와 같이 `[#1]`로 태깅합니다.
+- Key of rules field means branch prefix. By `feature` key, this rule is applied to branches named using the `feature/***` pattern.
+- Value represents the repository to be tagged. For example, rule with value 'your-org/your-repo' tags 'your-org/your-repo#1'.
+- A rule with a `null` value tags repository itself.
 
 #### protect
 
-- 커밋을 막고 싶은 브랜치를 배열로 넣어주세요. `main`, `master`, `develop`는 기본적으로 막힙니다.
+- Defines branch prefixes that are blocked from committing. `main`, `master`, `develop` branch is blocked by default.
+
+### Example
+
+```json
+// commithelperrc.json
+{
+    "protect": ["epic"],
+    "rules": {
+        "feature": null,
+        "qa": "your-org/your-repo"
+    }
+}
+```
+
+> For example as above,
+>
+> - commit on `feature/1` branch will be tagged as `[#1]`.
+> - commit on `qa/1` branch will be tagged as `[your-org/your-repo#1]`.
+> - direct commit attempt toward `main`, `master`, `develop`, `epic/***` branch will be blocked
 
 ## Q&A
 
-- 커밋메시지에 이미 `[your-org/your-repo#1]` 와 같은 형식의 태깅이 되어 있으면 어떻게 되나요?
-  - `commithelper`는 동작하지 않고, 해당 커밋 메시지 태깅을 존중합니다.
-- `.commithelperrc` 룰과 자체 규칙 룰이 충돌하면 어떻게 되나요?
-  - `cosmicconfig`를 우선합니다.
-- `feature/1_xxx` `feature/1-xxx` 와 같은 형태의 브랜치명은 어떻게 처리되나요?
-  - `feature/1`로 처리됩니다.
-  - 자세한 내용은 테스트 코드를 참조하세요.
+- What happens if commit has already tagged issue like `[your-org/your-repo#1]`?
+  - `commithelper` do not works. Already tagged issue remains unchanged
+- How does commit-helper behaves on `feature/1_xxx` `feature/1-xxx` patterned branch name?
+  - It works same as `feature/1` branch.
