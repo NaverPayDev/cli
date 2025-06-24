@@ -1,5 +1,5 @@
 {
-    "name": "commithelper-go",
+    "name": "@naverpay/commithelper-go",
     "version": "1.0.0",
     "description": "A CLI tool to assist with commit messages based on branch names and configuration.",
     "bin": {
