@@ -1,0 +1,13 @@
+{
+    "name": "commithelper-go",
+    "version": "1.0.0",
+    "description": "A CLI tool to assist with commit messages based on branch names and configuration.",
+    "bin": {
+        "commithelper-go": "bin/commithelper-go"
+    },
+    "scripts": {
+        "build": "go build -o bin/commithelper-go main.go"
+    },
+    "author": "",
+    "license": "MIT"
+}
