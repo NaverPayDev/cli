@@ -17,6 +17,7 @@
     "author": "",
     "license": "MIT",
     "files": [
-        "bin"
+        "bin",
+        "scripts"
     ]
 }
