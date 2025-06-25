@@ -28,7 +28,9 @@ jobs:
               with:
                   ref: ${{ steps.get_branch.outputs.branch }}
                   fetch-depth: 0
-                  fetch: true # Ensure all history is fetched
+
+            - name: Fetch main branch
+              run: git fetch origin main:refs/remotes/origin/main
 
             - uses: actions/setup-go@v4
               with:
