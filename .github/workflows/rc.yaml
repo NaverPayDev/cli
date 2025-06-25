@@ -93,6 +93,8 @@ jobs:
             - name: uploadWindowsBinary
               if: env.commithelperGoWillBePublished == 'true'
               uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
               with:
                   upload_url: ${{ env.upload_url }}
                   asset_path: packages/commithelper-go/bin/commithelper-go-windows-amd64.exe
@@ -102,6 +104,8 @@ jobs:
             - name: uploadMacosAmd64Binary
               if: env.commithelperGoWillBePublished == 'true'
               uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
               with:
                   upload_url: ${{ env.upload_url }}
                   asset_path: packages/commithelper-go/bin/commithelper-go-darwin-amd64
@@ -111,6 +115,8 @@ jobs:
             - name: uploadMacosArm64Binary
               if: env.commithelperGoWillBePublished == 'true'
               uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
               with:
                   upload_url: ${{ env.upload_url }}
                   asset_path: packages/commithelper-go/bin/commithelper-go-darwin-arm64
@@ -120,6 +126,8 @@ jobs:
             - name: uploadLinuxBinary
               if: env.commithelperGoWillBePublished == 'true'
               uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
               with:
                   upload_url: ${{ env.upload_url }}
                   asset_path: packages/commithelper-go/bin/commithelper-go-linux-amd64
