@@ -36,11 +36,17 @@ jobs:
             - name: installDependencies
               run: pnpm install --frozen-lockfile
 
-            - name: checkIfCommitHelperGoWillBePublished
+            - name: checkIfCommitHelperGoWasPublished
               id: checkCommitHelperGo
               run: |
-                  pnpm changeset status > changeset-status.txt
-                  isPublished=$(grep -q "@naverpay/commithelper-go" changeset-status.txt && echo "true" || echo "false")
+                  packageVersion=$(cat packages/commithelper-go/package.json | jq -r '.version')
+                  npmInfo=$(npm info @naverpay/commithelper-go@$packageVersion --json 2>/dev/null || echo "{}")
+                  isValidJson=$(echo "$npmInfo" | jq empty > /dev/null 2>&1 && echo "true" || echo "false")
+                  if [ "$isValidJson" = "true" ]; then
+                    isPublished=$(echo "$npmInfo" | jq -r 'if .error then "false" else "true" end')
+                  else
+                    isPublished="false"
+                  fi
                   if [ "$isPublished" = "false" ]; then
                     echo "commithelperGoWillBePublished=false" >> $GITHUB_ENV
                   else
