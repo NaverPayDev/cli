@@ -97,7 +97,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
               with:
                   upload_url: ${{ env.upload_url }}
-                  asset_path: packages/commithelper-go/bin/commithelper-go-windows-amd64.exe
+                  asset_path: packages/commithelper-go/dist/commithelper-go-windows-amd64.exe
                   asset_name: commithelper-go-windows-amd64.exe
                   asset_content_type: application/octet-stream
 
@@ -108,7 +108,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
               with:
                   upload_url: ${{ env.upload_url }}
-                  asset_path: packages/commithelper-go/bin/commithelper-go-darwin-amd64
+                  asset_path: packages/commithelper-go/dist/commithelper-go-darwin-amd64
                   asset_name: commithelper-go-darwin-amd64
                   asset_content_type: application/octet-stream
 
@@ -119,7 +119,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
               with:
                   upload_url: ${{ env.upload_url }}
-                  asset_path: packages/commithelper-go/bin/commithelper-go-darwin-arm64
+                  asset_path: packages/commithelper-go/dist/commithelper-go-darwin-arm64
                   asset_name: commithelper-go-darwin-arm64
                   asset_content_type: application/octet-stream
 
@@ -130,6 +130,6 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
               with:
                   upload_url: ${{ env.upload_url }}
-                  asset_path: packages/commithelper-go/bin/commithelper-go-linux-amd64
+                  asset_path: packages/commithelper-go/dist/commithelper-go-linux-amd64
                   asset_name: commithelper-go-linux-amd64
                   asset_content_type: application/octet-stream
