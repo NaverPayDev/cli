@@ -4,6 +4,8 @@ const {existsSync, mkdirSync, readFileSync} = require('fs')
 const {platform, arch} = require('os')
 const {join} = require('path')
 
+console.log('Starting postinstall script: downloadBinary.js')
+
 // Define the mapping of platform and architecture to the corresponding binary file names
 const binaries = {
     'darwin-x64': 'commithelper-go-darwin-amd64',
@@ -15,6 +17,9 @@ const binaries = {
 // Determine the current platform and architecture
 const key = `${platform()}-${arch()}`
 const binary = binaries[key]
+
+console.log(`Detected platform: ${platform()}, architecture: ${arch()}`)
+console.log(`Selected binary: ${binary}`)
 
 // If the platform or architecture is not supported, exit with an error
 if (!binary) {
@@ -29,6 +34,7 @@ const version = packageJson.version
 
 // Construct the URL to download the binary from the GitHub releases
 const url = `https://github.com/NaverPayDev/cli/releases/download/v${version}/${binary}`
+console.log(`Constructed URL: ${url}`)
 
 // Define the directory where the binary will be saved
 const binDir = join(__dirname, '../bin')
@@ -36,18 +42,29 @@ const binDir = join(__dirname, '../bin')
 // Create the bin directory if it does not exist
 if (!existsSync(binDir)) {
     mkdirSync(binDir)
+    console.log(`Created bin directory: ${binDir}`)
 }
 
 // Define the full path where the binary will be saved
 const outputPath = join(binDir, binary)
-
-// Log the download process
-console.log(`Downloading binary for ${key} from ${url}...`)
+console.log(`Binary will be saved to: ${outputPath}`)
 
 // Download the binary using curl and make it executable
-execSync(`curl -L ${url} -o ${outputPath} && chmod +x ${outputPath}`, {
-    stdio: 'inherit',
-})
+try {
+    execSync(`curl -L ${url} -o ${outputPath}`, {stdio: 'inherit'})
+    console.log(`Binary successfully downloaded to: ${outputPath}`)
+} catch (error) {
+    console.error(`Failed to download binary: ${error.message}`)
+    process.exit(1)
+}
 
-// Log the successful download
-console.log(`Binary downloaded to ${outputPath}`)
+// Add execution permission to the binary
+try {
+    execSync(`chmod +x ${outputPath}`, {stdio: 'inherit'})
+    console.log(`Execution permission added to binary: ${outputPath}`)
+} catch (error) {
+    console.error(`Failed to set execution permission: ${error.message}`)
+    process.exit(1)
+}
+
+console.log('Postinstall script completed successfully.')
