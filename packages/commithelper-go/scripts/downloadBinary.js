@@ -33,7 +33,7 @@ const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
 const version = packageJson.version
 
 // Construct the URL to download the binary from the GitHub releases
-const url = `https://github.com/NaverPayDev/cli/releases/download/v${version}/${binary}`
+const url = `https://github.com/NaverPayDev/cli/releases/download/@naverpay/commithelper-go@${version}/${binary}`
 console.log(`Constructed URL: ${url}`)
 
 // Define the directory where the binary will be saved

@@ -3,15 +3,14 @@
     "version": "0.0.0",
     "description": "A CLI tool to assist with commit messages based on branch names and configuration.",
     "bin": {
-        "commithelper-go": "bin/commithelper-go"
+        "commithelper-go": "bin/cli.js"
     },
     "scripts": {
-        "build:default": "go build -o bin/commithelper-go main.go",
         "build:windows": "GOOS=windows GOARCH=amd64 go build -o bin/commithelper-go-windows-amd64.exe main.go",
         "build:macos:amd64": "GOOS=darwin GOARCH=amd64 go build -o bin/commithelper-go-darwin-amd64 main.go",
         "build:macos:arm64": "GOOS=darwin GOARCH=arm64 go build -o bin/commithelper-go-darwin-arm64 main.go",
         "build:linux": "GOOS=linux GOARCH=amd64 go build -o bin/commithelper-go-linux-amd64 main.go",
-        "build": "pnpm build:default && pnpm build:windows && pnpm build:macos:amd64 && pnpm build:macos:arm64 && pnpm build:linux",
+        "build": "pnpm build:windows && pnpm build:macos:amd64 && pnpm build:macos:arm64 && pnpm build:linux",
         "postinstall": "node ./scripts/downloadBinary.js"
     },
     "author": "",
