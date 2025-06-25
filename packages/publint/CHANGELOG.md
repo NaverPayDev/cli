@@ -1,10 +1,16 @@
 # @naverpay/publint
 
+## 1.0.0
+
+### Major Changes
+
+-   a0300b9: create major release
+
 ## 0.0.6
 
 ### Patch Changes
 
--   8701371: 
+-   8701371:
     -   에러 메시지 글로벌화
     -   에러 로깅 제거
 
