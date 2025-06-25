@@ -39,9 +39,9 @@ jobs:
             - name: checkIfCommitHelperGoWillBePublished
               id: checkCommitHelperGo
               run: |
-                  pnpm changeset status --json > changeset-status.json
-                  isPublished=$(cat changeset-status.json | jq -r '.releases[] | select(.name == "@naverpay/commithelper-go") | .type')
-                  if [ -z "$isPublished" ]; then
+                  pnpm changeset status > changeset-status.txt
+                  isPublished=$(grep -q "@naverpay/commithelper-go" changeset-status.txt && echo "true" || echo "false")
+                  if [ "$isPublished" = "false" ]; then
                     echo "commithelperGoWillBePublished=false" >> $GITHUB_ENV
                   else
                     echo "commithelperGoWillBePublished=true" >> $GITHUB_ENV
