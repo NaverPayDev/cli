@@ -29,10 +29,10 @@ jobs:
                   ref: ${{ steps.get_branch.outputs.branch }}
                   fetch-depth: 0
 
-            - name: Fetch main branch
+            - name: Ensure local main branch exists and is up to date
               run: |
-                  git fetch origin main:refs/remotes/origin/main
-                  git branch -a
+                  git fetch origin main
+                  git branch main origin/main
 
             - uses: actions/setup-go@v4
               with:
@@ -53,7 +53,6 @@ jobs:
             - name: checkIfCommitHelperGoWillBePublished
               id: checkCommitHelperGo
               run: |
-                  git fetch origin main:refs/remotes/origin/main
                   pnpm changeset status > changeset-status.txt
                   isPublished=$(grep -q "@naverpay/commithelper-go" changeset-status.txt && echo "true" || echo "false")
                   if [ "$isPublished" = "false" ]; then
