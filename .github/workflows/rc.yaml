@@ -1,40 +1,49 @@
-name: release packages
+# Adjust according to your needs
+name: Release RC
 
 on:
-    push:
-        branches:
-            - main
+    issue_comment:
+        types:
+            - created
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+permissions:
+    contents: write # to create release
+
 jobs:
-    release:
+    canary:
+        if: ${{ github.event.issue.pull_request && (github.event.comment.body == 'rc-publish' || github.event.comment.body == '/rc-publish')}}
         runs-on: ubuntu-latest
+        env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         steps:
-            - name: checkoutRepo
-              uses: actions/checkout@v3
+            - name: Get PR branch name
+              id: get_branch
+              run: |
+                  PR=$(curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" ${{ github.event.issue.pull_request.url }})
+                  echo "::set-output name=branch::$(echo $PR | jq -r '.head.ref')"
+
+            - uses: actions/checkout@v4
               with:
-                  token: ${{ secrets.ACTION_TOKEN }}
+                  ref: ${{ steps.get_branch.outputs.branch }}
                   fetch-depth: 0
 
-            - name: setupGo
-              uses: actions/setup-go@v4
+            - uses: actions/setup-go@v4
               with:
                   go-version: '1.24'
 
-            - name: useNodeJs
-              uses: actions/setup-node@v4
+            - uses: pnpm/action-setup@v4
+            - uses: actions/setup-node@v4
               with:
                   node-version: '20.x'
+                  cache: 'pnpm'
 
-            - name: installCorepack
-              run: npm install -g corepack@0.31.0
-
-            - name: enableCorepack
-              run: corepack enable
-
-            - name: installDependencies
+            - name: Install Dependencies
               run: pnpm install --frozen-lockfile
+
+            - name: Build
+              run: pnpm build
 
             - name: checkIfCommitHelperGoWillBePublished
               id: checkCommitHelperGo
@@ -47,21 +56,19 @@ jobs:
                     echo "commithelperGoWillBePublished=true" >> $GITHUB_ENV
                   fi
 
-            - name: buildNodePackages
-              run: pnpm build
-
-            - name: createReleasePullRequestOrPublishToNpm
-              id: changesets
-              uses: changesets/action@v1
+            - name: RC Publish
+              uses: NaverPayDev/changeset-actions/canary-publish@main
               with:
-                  title: '🚀 version changed packages'
-                  commit: '📦 bump changed packages version'
-                  publish: pnpm release
-              env:
-                  GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  github_token: ${{ secrets.ACTION_TOKEN }} # Add user PAT if necessary
+                  npm_tag: rc # Specify the npm tag to use for deployment
+                  npm_token: ${{ secrets.NPM_TOKEN }} # Provide the token required for npm publishing
+                  publish_script: pnpm run release:canary # Script to execute Canary deployment
+                  packages_dir: packages # Directory of packages to detect changes (default: packages,share)
+                  excludes: '.turbo,.github' # Files or directories to exclude from change detection
+                  version_template: '{VERSION}-rc.{DATE}-{COMMITID7}'
+                  create_release: true
 
-            - name: getReleaseUploadUrl
+            - name: getReleaseUploadUrlOfCommitHelperGo
               id: getRelease
               if: env.commithelperGoWillBePublished == 'true'
               run: |
