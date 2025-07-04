@@ -1,0 +1,117 @@
+name: 'upload asset'
+description: 'Upload asset for go packages'
+
+on:
+    workflow_dispatch:
+        inputs:
+            package:
+                description: 'Package to upload asset'
+                required: true
+                default: '@naverpay/commithelper-go'
+            version:
+                description: 'Which version to upload asset'
+                required: true
+    workflow_call:
+        inputs:
+            package:
+                description: 'Package to upload asset'
+                required: true
+                type: string
+            version:
+                description: 'Which version to upload asset'
+                required: true
+                type: string
+
+permissions:
+    contents: write # to create release
+
+jobs:
+    release-asset:
+        runs-on: ubuntu-latest
+        env:
+            SKIP_COMMIT_HELPER_POSTINSTALL: 1
+            GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+            - name: checkoutRepo
+              uses: actions/checkout@v3
+              with:
+                  token: ${{ secrets.ACTION_TOKEN }}
+                  fetch-depth: 0
+
+            - name: setupGo
+              uses: actions/setup-go@v4
+              with:
+                  go-version: '1.24'
+
+            - name: useNodeJs
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20.x'
+
+            - name: installCorepack
+              run: npm install -g corepack@0.31.0
+
+            - name: enableCorepack
+              run: corepack enable
+
+            - name: installDependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: buildNodePackages
+              run: pnpm build
+
+            - name: buildCrossPlatformBinaries
+              run: |
+                  cd packages/commithelper-go
+                  mkdir -p dist
+                  # Build for Windows
+                  GOOS=windows GOARCH=amd64 go build -o dist/commithelper-go-windows-amd64.exe main.go
+                  # Build for macOS AMD64
+                  GOOS=darwin GOARCH=amd64 go build -o dist/commithelper-go-darwin-amd64 main.go
+                  # Build for macOS ARM64
+                  GOOS=darwin GOARCH=arm64 go build -o dist/commithelper-go-darwin-arm64 main.go
+                  # Build for Linux AMD64
+                  GOOS=linux GOARCH=amd64 go build -o dist/commithelper-go-linux-amd64 main.go
+
+            - name: getReleaseUploadUrl
+              id: getRelease
+              run: |
+                  packageName="${{ inputs.package }}"
+                  packageVersion="${{ inputs.version }}"
+                  releaseTag="$packageName@$packageVersion"
+                  apiUrl="https://api.github.com/repos/NaverPayDev/cli/releases/tags/$releaseTag"
+                  uploadUrl=$(curl -s -H "Authorization: Bearer ${{ secrets.ACTION_TOKEN }}" $apiUrl | jq -r '.upload_url')
+                  echo "upload_url=$uploadUrl" >> $GITHUB_ENV
+
+            - name: uploadWindowsBinary
+              uses: actions/upload-release-asset@v1
+              with:
+                  upload_url: ${{ env.upload_url }}
+                  asset_path: packages/commithelper-go/dist/commithelper-go-windows-amd64.exe
+                  asset_name: commithelper-go-windows-amd64.exe
+                  asset_content_type: application/octet-stream
+
+            - name: uploadMacosAmd64Binary
+              uses: actions/upload-release-asset@v1
+              with:
+                  upload_url: ${{ env.upload_url }}
+                  asset_path: packages/commithelper-go/dist/commithelper-go-darwin-amd64
+                  asset_name: commithelper-go-darwin-amd64
+                  asset_content_type: application/octet-stream
+
+            - name: uploadMacosArm64Binary
+              uses: actions/upload-release-asset@v1
+              with:
+                  upload_url: ${{ env.upload_url }}
+                  asset_path: packages/commithelper-go/dist/commithelper-go-darwin-arm64
+                  asset_name: commithelper-go-darwin-arm64
+                  asset_content_type: application/octet-stream
+
+            - name: uploadLinuxBinary
+              uses: actions/upload-release-asset@v1
+              with:
+                  upload_url: ${{ env.upload_url }}
+                  asset_path: packages/commithelper-go/dist/commithelper-go-linux-amd64
+                  asset_name: commithelper-go-linux-amd64
+                  asset_content_type: application/octet-stream
