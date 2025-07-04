@@ -14,6 +14,7 @@ jobs:
         runs-on: ubuntu-latest
         env:
             GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
+            SKIP_COMMIT_HELPER_POSTINSTALL: 1
         steps:
             - name: Checkout Repo
               uses: actions/checkout@v3

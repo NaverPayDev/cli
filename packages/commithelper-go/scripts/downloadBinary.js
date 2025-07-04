@@ -4,6 +4,11 @@ const {existsSync, mkdirSync, readFileSync} = require('fs')
 const {platform, arch} = require('os')
 const {join} = require('path')
 
+if (process.env.SKIP_COMMIT_HELPER_POSTINSTALL) {
+    console.log('Skipping postinstall script as SKIP_COMMIT_HELPER_POSTINSTALL is set.')
+    process.exit(0)
+}
+
 console.log('Starting postinstall script: downloadBinary.js')
 
 // Define the mapping of platform and architecture to the corresponding binary file names
