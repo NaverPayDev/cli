@@ -3,7 +3,7 @@
     "version": "0.0.0",
     "description": "A CLI tool to assist with commit messages based on branch names and configuration.",
     "bin": {
-        "commithelper-go": "bin/commithelper-go"
+        "commithelper-go": "bin/cli.js"
     },
     "scripts": {
         "build:windows": "GOOS=windows GOARCH=amd64 go build -o dist/commithelper-go-windows-amd64.exe main.go",

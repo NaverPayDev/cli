@@ -67,6 +67,8 @@ importers:
         specifier: ^5.2.2
         version: 5.3.3
 
+  packages/commithelper-go: {}
+
   packages/fmb:
     dependencies:
       chalk:
