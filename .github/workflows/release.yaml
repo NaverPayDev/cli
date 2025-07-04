@@ -76,7 +76,7 @@ jobs:
                   packageVersion=$(cat packages/commithelper-go/package.json | jq -r '.version')
                   releaseTag="@naverpay/commithelper-go@$packageVersion"
                   apiUrl="https://api.github.com/repos/NaverPayDev/cli/releases/tags/$releaseTag"
-                  uploadUrl=$(curl -s -H "Authorization: Bearer ${{ secrets.ACTION_TOKEN }}" $apiUrl | jq -r '.upload_url' | sed 's/{?name,label}//')
+                  uploadUrl=$(curl -s -H "Authorization: Bearer ${{ secrets.ACTION_TOKEN }}" $apiUrl | jq -r '.upload_url')
                   echo "upload_url=$uploadUrl" >> $GITHUB_ENV
 
             - name: uploadWindowsBinary
