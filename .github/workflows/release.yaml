@@ -40,7 +40,7 @@ jobs:
               id: checkCommitHelperGo
               run: |
                   packageVersion=$(cat packages/commithelper-go/package.json | jq -r '.version')
-                  npmInfo=$(npm info @naverpay/commithelper-go@$packageVersion --json 2>/dev/null || echo "{}")
+                  npmInfo=$(npm info @naverpay/commithelper-go@$packageVersion --json >/dev/null 2>&1 && npm info @naverpay/commithelper-go@$packageVersion --json 2>/dev/null || echo "{}")
                   isValidJson=$(echo "$npmInfo" | jq empty > /dev/null 2>&1 && echo "true" || echo "false")
                   if [ "$isValidJson" = "true" ]; then
                     isPublished=$(echo "$npmInfo" | jq -r 'if .error then "false" else "true" end')
