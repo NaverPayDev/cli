@@ -36,6 +36,23 @@ func main() {
 		commitMessage = input
 	}
 
+	// Check if commit message is already tagged
+	if isAlreadyTagged(commitMessage) {
+		// Do not modify if already tagged
+		if _, err := os.Stat(input); err == nil {
+			// Write back unchanged if input was a file
+			err = ioutil.WriteFile(input, []byte(commitMessage), 0644)
+			if err != nil {
+				fmt.Printf("Error writing to commit message file: %v\n", err)
+				os.Exit(1)
+			}
+		} else {
+			// Print unchanged if input was a direct message
+			fmt.Println(commitMessage)
+		}
+		return
+	}
+
 	branchName := getCurrentBranchName()
 	config := loadConfig()
 
@@ -121,4 +138,14 @@ func generatePrefix(branchName string, config Config) string {
 	}
 
 	return fmt.Sprintf("%s#%s", *repo, issueNumber)
+}
+
+func isAlreadyTagged(commitMessage string) bool {
+	// Check if commit message already contains issue tag like [#123] or [org/repo#123]
+	// This pattern matches:
+	// - [#123] (simple issue number)
+	// - [Some-Org/Some_Repo#123] (complex repo with special chars)
+	pattern := regexp.MustCompile(`^\[.*?#\d+\]`)
+	trimmedMessage := strings.TrimSpace(commitMessage)
+	return pattern.MatchString(trimmedMessage)
 }
