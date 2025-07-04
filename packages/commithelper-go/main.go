@@ -11,7 +11,8 @@ import (
 )
 
 type Config struct {
-	Rules map[string]*string `json:"rules"`
+	Rules   map[string]*string `json:"rules"`
+	Protect []string           `json:"protect"`
 }
 
 func main() {
@@ -56,6 +57,12 @@ func main() {
 	branchName := getCurrentBranchName()
 	config := loadConfig()
 
+	// Check if current branch is protected
+	if isProtectedBranch(branchName, config.Protect) {
+		fmt.Printf("Error: Cannot commit to protected branch '%s'\n", branchName)
+		os.Exit(1)
+	}
+
 	prefix := generatePrefix(branchName, config)
 	if prefix != "" {
 		commitMessage = fmt.Sprintf("[%s] %s", prefix, commitMessage)
@@ -96,7 +103,7 @@ func loadConfig() Config {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Return an empty config if the file does not exist
-			return Config{Rules: map[string]*string{}}
+			return Config{Rules: map[string]*string{}, Protect: []string{}}
 		}
 		fmt.Printf("Error reading config file at %s: %v\n", configPath, err)
 		os.Exit(1)
@@ -138,6 +145,15 @@ func generatePrefix(branchName string, config Config) string {
 	}
 
 	return fmt.Sprintf("%s#%s", *repo, issueNumber)
+}
+
+func isProtectedBranch(branchName string, protectedBranches []string) bool {
+	for _, protected := range protectedBranches {
+		if branchName == protected {
+			return true
+		}
+	}
+	return false
 }
 
 func isAlreadyTagged(commitMessage string) bool {
