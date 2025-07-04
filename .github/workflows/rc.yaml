@@ -16,6 +16,7 @@ jobs:
         runs-on: ubuntu-latest
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            SKIP_COMMIT_HELPER_POSTINSTALL: 1
         steps:
             - name: Get PR branch name
               id: get_branch
