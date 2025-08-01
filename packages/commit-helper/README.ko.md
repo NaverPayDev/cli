@@ -205,7 +205,6 @@ A: `--no-verify` 플래그 사용: `git commit --no-verify -m "긴급 수정"`
 
 1. 파일 이름 확인: `.commithelperrc.json` (점으로 시작)
 2. JSON 문법 검증
-3. 디버그 모드 실행: `DEBUG=commit-helper git commit`
 
 ## 라이선스
 

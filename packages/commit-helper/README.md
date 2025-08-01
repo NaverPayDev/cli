@@ -205,7 +205,6 @@ A: Use `--no-verify` flag: `git commit --no-verify -m "Emergency fix"`
 
 1. Check file name: `.commithelperrc.json` (note the dot)
 2. Validate JSON syntax
-3. Run with debug: `DEBUG=commit-helper git commit`
 
 ## License
 
