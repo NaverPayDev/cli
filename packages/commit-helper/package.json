@@ -19,6 +19,12 @@
         "@vercel/ncc": "^0.38.1",
         "typescript": "^5.2.2"
     },
+    "files": [
+        "dist",
+        "README.md",
+        "README.ko.md",
+        "CHANGELOG.md"
+    ],
     "engines": {
         "node": ">=18.0.0"
     },
