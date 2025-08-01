@@ -1,89 +1,212 @@
 # @naverpay/commit-helper
 
-This CLI provides various tools which assist your commit based on [husky](https://typicode.github.io/husky/) `commit-msg` hook.
+> Automatically adds issue numbers to commit messages based on branch names and protects important branches
 
-## How to use
+## Installation
 
-### .husky/commit-msg
-
-```
-npx --yes @naverpay/commit-helper@latest $1
-```
-
-> `@latest` is not necessary but this option always provides latest version of commit-helper.
-
-## what it does
-
-### Tag related issue
-
-> Automatically Add your related github issue number at your commit message through your branch name
-
-```shell
-➜  your-repo git:(feature/1) git add . &&  git commit -m ":memo: test"
-ℹ No staged files match any configured task.
-$ git branch --show-current
-feature/1
-[feature/1 1e70c244f] [#1] :memo: test
- 1 file changed, 1 insertion(+)
+```bash
+npm install --save-dev @naverpay/commit-helper
+# or
+yarn add -D @naverpay/commit-helper
+# or
+pnpm add -D @naverpay/commit-helper
 ```
 
-Your issue number is automatically tagged base on your setting (`.commithelperrc.json`)
+## Quick Start
 
-### Blocking commit
+### 1. Install Husky (if not already installed)
 
-- Blocks direct commit toward `main`, `develop` `master` branch by throwing error on commit attempt.
-- To block specific branches, add at `protect` field on `commithelperrc`.
+```bash
+npm install --save-dev husky
+npx husky init
+```
 
-#### Customization
+### 2. Add commit-msg hook
 
-If you need to add customized commit rule, use [cosmiconfig](https://github.com/cosmiconfig/cosmiconfig) rules as `commithelper`. `cosmiconfig` is a library widely used in tools like `eslint` and `prettier` to read `rc` configuration files. `commithelper` also uses `cosmiconfig`. If there is any conflict with predefined rules, `cosmicconfig` takes precedence.
+```bash
+echo 'npx --yes @naverpay/commit-helper@latest $1' > .husky/commit-msg
+chmod +x .husky/commit-msg
+```
 
-### commithelperrc
+### 3. Create a commit
 
-This is Basic rule of `.commithelperrc`.
+```bash
+git checkout -b feature/123-new-feature
+git add .
+git commit -m "Add new feature"
+# Result: [#123] Add new feature
+```
+
+## Features
+
+### 🏷️ Automatic Issue Tagging
+
+Extracts issue numbers from branch names and adds them to commit messages:
+
+- `feature/123` → `[#123] your message`
+- `qa/456` → `[your-org/your-repo#456] your message`
+- `hotfix/789-urgent` → `[#789] your message`
+
+### 🛡️ Branch Protection
+
+Prevents direct commits to protected branches:
+
+- Default: `main`, `master`, `develop`
+- Customizable via configuration
+
+### ⚙️ Flexible Configuration
+
+Supports custom rules and remote configuration inheritance.
+
+## Configuration
+
+Create `.commithelperrc.json` in your project root:
 
 ```json
 {
-    "protect": ["main", "master", "develop"],
+    "protect": ["main", "master", "develop", "staging"],
     "rules": {
         "feature": null,
-        "qa": "your-org/your-repo"
+        "bugfix": null,
+        "hotfix": null,
+        "qa": "naverpay/qa-issues",
+        "docs": "naverpay/documentation"
     }
 }
 ```
 
-#### rules
+### Configuration Options
 
-- Key of rules field means branch prefix. By `feature` key, this rule is applied to branches named using the `feature/***` pattern.
-- Value represents the repository to be tagged. For example, rule with value 'your-org/your-repo' tags 'your-org/your-repo#1'.
-- A rule with a `null` value tags repository itself.
+#### `protect` (array)
 
-#### protect
+List of branch names to protect from direct commits.
 
-- Defines branch prefixes that are blocked from committing. `main`, `master`, `develop` branch is blocked by default.
+- Default: `["main", "master", "develop"]`
 
-### Example
+#### `rules` (object)
+
+Mapping of branch prefixes to repository names.
+
+- Key: Branch prefix (e.g., `"feature"`)
+- Value: Repository name or `null` for current repo
+
+#### `extends` (string)
+
+URL to inherit configuration from:
 
 ```json
-// commithelperrc.json
 {
-    "protect": ["epic"],
+    "extends": "https://raw.githubusercontent.com/naverpay/standards/main/.commithelperrc.json"
+}
+```
+
+## Examples
+
+### Basic Feature Branch
+
+```bash
+git checkout -b feature/NP-1234-payment-integration
+git commit -m "Implement payment gateway"
+# Result: [#1234] Implement payment gateway
+```
+
+### External Repository Reference
+
+With configuration:
+
+```json
+{
     "rules": {
-        "feature": null,
-        "qa": "your-org/your-repo"
+        "qa": "naverpay/qa-tracker"
     }
 }
 ```
 
-> For example as above,
->
-> - commit on `feature/1` branch will be tagged as `[#1]`.
-> - commit on `qa/1` branch will be tagged as `[your-org/your-repo#1]`.
-> - direct commit attempt toward `main`, `master`, `develop`, `epic/***` branch will be blocked
+```bash
+git checkout -b qa/789-test-payment-flow
+git commit -m "Add E2E tests for payment"
+# Result: [naverpay/qa-tracker#789] Add E2E tests for payment
+```
 
-## Q&A
+### Protected Branch
 
-- What happens if commit has already tagged issue like `[your-org/your-repo#1]`?
-  - `commithelper` do not works. Already tagged issue remains unchanged
-- How does commit-helper behaves on `feature/1_xxx` `feature/1-xxx` patterned branch name?
-  - It works same as `feature/1` branch.
+```bash
+git checkout main
+git commit -m "Direct commit"
+# Error: ❌ Direct commits to protected branch 'main' are not allowed!
+# Please create a feature branch and use pull request.
+```
+
+## Advanced Usage
+
+### Lefthook Integration
+
+If you prefer Lefthook over Husky:
+
+```yaml
+# lefthook.yml
+commit-msg:
+    scripts:
+        'commit-helper':
+            runner: npx --yes @naverpay/commit-helper@latest {1}
+```
+
+### CI/CD Integration
+
+For commit message validation in CI:
+
+```yaml
+# .github/workflows/pr.yml
+- name: Validate commit messages
+  run: |
+      git log --format=%s origin/main..HEAD | while read msg; do
+        if ! echo "$msg" | grep -qE '^\[[#A-Za-z0-9-/]+\]'; then
+          echo "Invalid commit message: $msg"
+          exit 1
+        fi
+      done
+```
+
+## API
+
+### CLI Usage
+
+```bash
+npx @naverpay/commit-helper <commit-msg-file>
+```
+
+- **Parameters**:
+  - `commit-msg-file` (string): Path to commit message file (provided by git hook)
+- **Returns**: Exit code 0 on success, 1 on failure
+- **Throws**: Error message to stderr on invalid configuration or protected branch
+
+## FAQ
+
+**Q: Does it work with existing issue tags?**  
+A: Yes, if your commit message already contains a tag like `[#123]`, commit-helper will skip it.
+
+**Q: Can I use multiple issue numbers?**  
+A: The branch name supports one issue number, but you can manually add more in your commit message.
+
+**Q: What branch name formats are supported?**  
+A: Any format with a number after slash: `feature/123`, `feature/123-description`, `feature/123_description`
+
+**Q: How to temporarily bypass protection?**  
+A: Use `--no-verify` flag: `git commit --no-verify -m "Emergency fix"`
+
+## Troubleshooting
+
+### Hook not executing
+
+1. Check file permissions: `ls -la .husky/commit-msg`
+2. Ensure Husky is installed: `npx husky install`
+
+### Configuration not loading
+
+1. Check file name: `.commithelperrc.json` (note the dot)
+2. Validate JSON syntax
+
+## License
+
+MIT
+No newline at end of file
