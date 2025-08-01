@@ -1,5 +1,17 @@
 # @naverpay/commit-helper
 
+## 1.2.1
+
+### Patch Changes
+
+-   90d2cbf: 🔥 remove 'develop' 'master' branch rules from DEFAULT_PROTECTED_BRANCHES
+
+    PR: [📚 README 업데이트: 한국어 문서 추가 및 기능 설명 보강](https://github.com/NaverPayDev/cli/pull/46)
+
+-   ab3410d: add files field in package.json
+
+    PR: [files 에 꼭 필요한 파일만 추가](https://github.com/NaverPayDev/cli/pull/48)
+
 ## 1.2.0
 
 ### Minor Changes
