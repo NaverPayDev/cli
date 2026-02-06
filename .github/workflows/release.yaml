@@ -38,7 +38,7 @@ jobs:
         outputs:
             published: ${{ steps.publish_release.outputs.published || steps.publish_canary.outputs.published || steps.publish_rc.outputs.published }}
             commithelperGoWillBePublished: ${{ steps.checkCommitHelperGo.outputs.commithelperGoWillBePublished }}
-            packageVersion: ${{ steps.getCommitHelperGoVersion.outputs.packageVersion }}
+            packageVersion: ${{ steps.checkCommitHelperGo.outputs.publishedVersion || steps.getCommitHelperGoVersion.outputs.packageVersion }}
         env:
             SKIP_COMMIT_HELPER_POSTINSTALL: 1
             GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
@@ -135,10 +135,16 @@ jobs:
                   publishedPackages='${{ steps.publish_release.outputs.publishedPackages || steps.publish_canary.outputs.publishedPackages || steps.publish_rc.outputs.publishedPackages }}'
                   if [ -z "$publishedPackages" ] || [ "$publishedPackages" == "null" ]; then
                     echo "commithelperGoWillBePublished=false" >> $GITHUB_OUTPUT
-                  elif echo "$publishedPackages" | jq -e '.[] | select(.name == "@naverpay/commithelper-go")' > /dev/null 2>&1; then
-                    echo "commithelperGoWillBePublished=true" >> $GITHUB_OUTPUT
                   else
-                    echo "commithelperGoWillBePublished=false" >> $GITHUB_OUTPUT
+                    commithelperGo=$(echo "$publishedPackages" | jq -r '.[] | select(.name == "@naverpay/commithelper-go")')
+                    if [ -n "$commithelperGo" ] && [ "$commithelperGo" != "null" ]; then
+                      echo "commithelperGoWillBePublished=true" >> $GITHUB_OUTPUT
+                      # Extract the actual published version (handles canary/RC versions)
+                      version=$(echo "$commithelperGo" | jq -r '.version')
+                      echo "publishedVersion=$version" >> $GITHUB_OUTPUT
+                    else
+                      echo "commithelperGoWillBePublished=false" >> $GITHUB_OUTPUT
+                    fi
                   fi
 
     upload-assets:
