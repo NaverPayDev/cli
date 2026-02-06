@@ -87,9 +87,9 @@ jobs:
                     isPublished="false"
                   fi
                   if [ "$isPublished" = "false" ]; then
-                    echo "commithelperGoWillBePublished=false" >> $GITHUB_OUTPUT
-                  else
                     echo "commithelperGoWillBePublished=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "commithelperGoWillBePublished=false" >> $GITHUB_OUTPUT
                   fi
 
             - name: getCommitHelperGoVersion
@@ -126,6 +126,7 @@ jobs:
                   packages_dir: 'packages'
                   excludes: '.turbo,.github'
                   version_template: '{VERSION}-canary.{DATE}-{COMMITID7}'
+                  create_release: ${{ steps.checkCommitHelperGo.outputs.commithelperGoWillBePublished == 'true' }}
 
             - name: Publish - RC
               if: github.event_name == 'issue_comment' && (github.event.comment.body == 'rc-publish' || github.event.comment.body == '/rc-publish')
@@ -143,7 +144,7 @@ jobs:
 
     upload-assets:
         needs: release
-        if: needs.release.outputs.published == 'true' && needs.release.outputs.commithelperGoWillBePublished == 'true'
+        if: needs.release.outputs.commithelperGoWillBePublished == 'true'
         uses: ./.github/workflows/release-asset.yaml
         with:
             package: '@naverpay/commithelper-go'
