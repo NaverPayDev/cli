@@ -74,44 +74,21 @@ jobs:
                   # Build for Linux AMD64
                   GOOS=linux GOARCH=amd64 go build -o dist/commithelper-go-linux-amd64 main.go
 
-            - name: getReleaseUploadUrl
-              id: getRelease
+            - name: Upload release assets
               run: |
                   packageName="${{ inputs.package }}"
                   packageVersion="${{ inputs.version }}"
                   releaseTag="$packageName@$packageVersion"
-                  apiUrl="https://api.github.com/repos/NaverPayDev/cli/releases/tags/$releaseTag"
-                  uploadUrl=$(curl -s -H "Authorization: Bearer ${{ secrets.ACTION_TOKEN }}" $apiUrl | jq -r '.upload_url')
-                  echo "upload_url=$uploadUrl" >> $GITHUB_ENV
 
-            - name: uploadWindowsBinary
-              uses: actions/upload-release-asset@v1
-              with:
-                  upload_url: ${{ env.upload_url }}
-                  asset_path: packages/commithelper-go/dist/commithelper-go-windows-amd64.exe
-                  asset_name: commithelper-go-windows-amd64.exe
-                  asset_content_type: application/octet-stream
+                  echo "🔍 Uploading assets for release: $releaseTag"
 
-            - name: uploadMacosAmd64Binary
-              uses: actions/upload-release-asset@v1
-              with:
-                  upload_url: ${{ env.upload_url }}
-                  asset_path: packages/commithelper-go/dist/commithelper-go-darwin-amd64
-                  asset_name: commithelper-go-darwin-amd64
-                  asset_content_type: application/octet-stream
+                  gh release upload "$releaseTag" \
+                    packages/commithelper-go/dist/commithelper-go-windows-amd64.exe \
+                    packages/commithelper-go/dist/commithelper-go-darwin-amd64 \
+                    packages/commithelper-go/dist/commithelper-go-darwin-arm64 \
+                    packages/commithelper-go/dist/commithelper-go-linux-amd64 \
+                    --clobber
 
-            - name: uploadMacosArm64Binary
-              uses: actions/upload-release-asset@v1
-              with:
-                  upload_url: ${{ env.upload_url }}
-                  asset_path: packages/commithelper-go/dist/commithelper-go-darwin-arm64
-                  asset_name: commithelper-go-darwin-arm64
-                  asset_content_type: application/octet-stream
-
-            - name: uploadLinuxBinary
-              uses: actions/upload-release-asset@v1
-              with:
-                  upload_url: ${{ env.upload_url }}
-                  asset_path: packages/commithelper-go/dist/commithelper-go-linux-amd64
-                  asset_name: commithelper-go-linux-amd64
-                  asset_content_type: application/octet-stream
+                  echo "✅ All assets uploaded successfully!"
+              env:
+                  GH_TOKEN: ${{ secrets.ACTION_TOKEN }}
