@@ -5,6 +5,7 @@
     "bin": {
         "commithelper-go": "bin/cli.js"
     },
+    "homepage": "https://github.com/NaverPayDev/cli/tree/main/packages/commithelper-go",
     "scripts": {
         "build:windows": "GOOS=windows GOARCH=amd64 go build -o dist/commithelper-go-windows-amd64.exe main.go",
         "build:macos:amd64": "GOOS=darwin GOARCH=amd64 go build -o dist/commithelper-go-darwin-amd64 main.go",

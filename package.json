@@ -5,7 +5,11 @@
         "type": "git",
         "url": "https://github.com/NaverPayDev/cli.git"
     },
+    "bugs": {
+        "url": "https://github.com/NaverPayDev/cli/issues"
+    },
     "version": "0.0.0",
+    "homepage": "https://github.com/NaverPayDev/cli",
     "scripts": {
         "prepare": "husky install",
         "start": "turbo run start",
@@ -18,7 +22,7 @@
         "markdownlint": "markdownlint '**/*.md' '#.changeset' '#**/CHANGELOG.md'",
         "markdownlint:fix": "markdownlint --fix '**/*.md' '#.changeset' '#**/CHANGELOG.md'",
         "clean": "turbo run clean && rm -rf ./node_modules && pnpm i",
-        "release:canary": "pnpm run build && changeset publish --no-git-tag",
+        "release:canary": "changeset publish --no-git-tag",
         "release": "pnpm run build && changeset publish"
     },
     "lint-staged": {
