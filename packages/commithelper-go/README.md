@@ -96,6 +96,73 @@ This is Basic rule of `.commithelperrc.json`.
 
 - Defines branch prefixes that are blocked from committing. `main`, `master`, `develop` branch is blocked by default.
 
+#### template
+
+- Defines a custom format for commit messages using Go template syntax.
+- If not specified, uses the default format: `[{{.Prefix}}] {{.Message}}`
+- Available template variables:
+  - `{{.Message}}`: Original commit message
+  - `{{.Number}}`: Issue number extracted from branch name
+  - `{{.Repo}}`: Repository name (empty string if not specified in rules)
+  - `{{.Prefix}}`: Full prefix (`#123` or `org/repo#123`)
+
+##### Template Examples
+
+**Example 1: Add issue reference at the end**
+
+```json
+{
+    "rules": {
+        "feature": null
+    },
+    "template": "{{.Message}}\n\nRef. #{{.Number}}"
+}
+```
+
+Result:
+
+```
+:memo: Update documentation
+
+Ref. #123
+```
+
+**Example 2: Custom format with repository**
+
+```json
+{
+    "rules": {
+        "qa": "your-org/your-repo"
+    },
+    "template": "{{.Message}}\n\nSee: {{.Prefix}}"
+}
+```
+
+Result:
+
+```
+:bug: Fix login bug
+
+See: your-org/your-repo#456
+```
+
+**Example 3: Conditional formatting**
+
+```json
+{
+    "rules": {
+        "feature": null
+    },
+    "template": "[{{.Prefix}}] {{.Message}}"
+}
+```
+
+Result:
+
+```
+[#123] :sparkles: Add new feature
+```
+
 ### Example
 
 ```json
