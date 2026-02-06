@@ -5,6 +5,7 @@
     "main": "dist/src/index.js",
     "keywords": [],
     "author": "yceffort <yceffort@gmail.com>",
+    "homepage": "https://github.com/NaverPayDev/cli/tree/main/packages/publint",
     "type": "module",
     "license": "ISC",
     "sideEffects": false,
