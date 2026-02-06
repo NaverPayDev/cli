@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -8,11 +9,20 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"text/template"
 )
 
 type Config struct {
-	Rules   map[string]*string `json:"rules"`
-	Protect []string           `json:"protect"`
+	Rules    map[string]*string `json:"rules"`
+	Protect  []string           `json:"protect"`
+	Template *string            `json:"template,omitempty"`
+}
+
+type TemplateData struct {
+	Message string
+	Number  string
+	Repo    string
+	Prefix  string
 }
 
 func main() {
@@ -63,9 +73,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	prefix := generatePrefix(branchName, config)
-	if prefix != "" {
-		commitMessage = fmt.Sprintf("[%s] %s", prefix, commitMessage)
+	templateData := generateTemplateData(branchName, config, commitMessage)
+	if templateData != nil {
+		commitMessage = applyTemplate(config, templateData)
 	}
 
 	if _, err := os.Stat(input); err == nil {
@@ -145,6 +155,63 @@ func generatePrefix(branchName string, config Config) string {
 	}
 
 	return fmt.Sprintf("%s#%s", *repo, issueNumber)
+}
+
+func generateTemplateData(branchName string, config Config, message string) *TemplateData {
+	pattern := regexp.MustCompile(`^(\w+)/(\d+).*`)
+	matches := pattern.FindStringSubmatch(branchName)
+	if len(matches) < 3 {
+		return nil
+	}
+
+	prefixKey := matches[1]
+	issueNumber := matches[2]
+
+	repo, exists := config.Rules[prefixKey]
+	if !exists {
+		return nil
+	}
+
+	var repoName string
+	var prefix string
+	if repo == nil {
+		repoName = ""
+		prefix = fmt.Sprintf("#%s", issueNumber)
+	} else {
+		repoName = *repo
+		prefix = fmt.Sprintf("%s#%s", *repo, issueNumber)
+	}
+
+	return &TemplateData{
+		Message: message,
+		Number:  issueNumber,
+		Repo:    repoName,
+		Prefix:  prefix,
+	}
+}
+
+func applyTemplate(config Config, data *TemplateData) string {
+	// If no template is configured, use default format
+	if config.Template == nil || *config.Template == "" {
+		return fmt.Sprintf("[%s] %s", data.Prefix, data.Message)
+	}
+
+	tmpl, err := template.New("commit").Parse(*config.Template)
+	if err != nil {
+		fmt.Printf("Error parsing template: %v\n", err)
+		// Fallback to default format
+		return fmt.Sprintf("[%s] %s", data.Prefix, data.Message)
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		fmt.Printf("Error executing template: %v\n", err)
+		// Fallback to default format
+		return fmt.Sprintf("[%s] %s", data.Prefix, data.Message)
+	}
+
+	return buf.String()
 }
 
 func isProtectedBranch(branchName string, protectedBranches []string) bool {
