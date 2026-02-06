@@ -3,6 +3,10 @@
     "version": "1.2.1",
     "description": "help your commit in git",
     "main": "./dist/index.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/NaverPayDev/cli/tree/main/packages/commit-helper"
+    },
     "homepage": "https://github.com/NaverPayDev/cli/tree/main/packages/commit-helper",
     "bin": {
         "commit-helper": "./dist/index.js"
