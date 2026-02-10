@@ -1,5 +1,13 @@
 # @naverpay/commithelper-go
 
+## 1.1.0
+
+### Minor Changes
+
+-   fa045c4: [commithelper-go] Add support for custom commit message templates
+
+    PR: [[commithelper-go] Add support for custom commit message templates](https://github.com/NaverPayDev/cli/pull/50)
+
 ## 1.0.1
 
 ### Patch Changes
