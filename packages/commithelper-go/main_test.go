@@ -18,9 +18,21 @@ func TestIsProtectedBranch(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := isProtectedBranch(tt.branch, protected)
-		if got != tt.want {
-			t.Errorf("isProtectedBranch(%q) = %v, want %v", tt.branch, got, tt.want)
-		}
+		t.Run(tt.branch, func(t *testing.T) {
+			got, err := isProtectedBranch(tt.branch, protected)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsProtectedBranch_InvalidPattern(t *testing.T) {
+	_, err := isProtectedBranch("main", []string{"["})
+	if err == nil {
+		t.Error("expected error for invalid pattern, got nil")
 	}
 }

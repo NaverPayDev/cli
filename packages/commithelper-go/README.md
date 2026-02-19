@@ -98,7 +98,7 @@ This is Basic rule of `.commithelperrc.json`.
   - `*` matches any sequence of characters except `/`
   - `?` matches any single character except `/`
   - `[...]` matches any character in the set
-- `main`, `master`, `develop` branch is blocked by default.
+  - Note: `*` does not match across `/`, so `release/*` matches `release/1.0` but not `release/1.0/hotfix`. Use `release/*/*` for nested branches.
 
 ```json
 {
