@@ -94,7 +94,17 @@ This is Basic rule of `.commithelperrc.json`.
 
 #### protect
 
-- Defines branch prefixes that are blocked from committing. `main`, `master`, `develop` branch is blocked by default.
+- Defines branches that are blocked from committing. Supports glob-style wildcard patterns.
+  - `*` matches any sequence of characters except `/`
+  - `?` matches any single character except `/`
+  - `[...]` matches any character in the set
+- `main`, `master`, `develop` branch is blocked by default.
+
+```json
+{
+    "protect": ["main", "master", "develop", "release/*", "epic/*"]
+}
+```
 
 #### template
 
@@ -180,7 +190,7 @@ Result:
 >
 > - commit on `feature/1` branch will be tagged as `[#1]`.
 > - commit on `qa/1` branch will be tagged as `[your-org/your-repo#1]`.
-> - direct commit attempt toward `main`, `master`, `develop`, `epic/***` branch will be blocked
+> - direct commit attempt toward `main`, `master`, `develop`, `epic/*` branch will be blocked
 
 ## Environment Variables
 

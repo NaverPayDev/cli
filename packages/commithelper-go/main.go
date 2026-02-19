@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strings"
 	"text/template"
@@ -215,8 +216,8 @@ func applyTemplate(config Config, data *TemplateData) string {
 }
 
 func isProtectedBranch(branchName string, protectedBranches []string) bool {
-	for _, protected := range protectedBranches {
-		if branchName == protected {
+	for _, pattern := range protectedBranches {
+		if matched, _ := path.Match(pattern, branchName); matched {
 			return true
 		}
 	}
