@@ -69,7 +69,12 @@ func main() {
 	config := loadConfig()
 
 	// Check if current branch is protected
-	if isProtectedBranch(branchName, config.Protect) {
+	protected, err := isProtectedBranch(branchName, config.Protect)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+	if protected {
 		fmt.Printf("Error: Cannot commit to protected branch '%s'\n", branchName)
 		os.Exit(1)
 	}
@@ -215,13 +220,17 @@ func applyTemplate(config Config, data *TemplateData) string {
 	return buf.String()
 }
 
-func isProtectedBranch(branchName string, protectedBranches []string) bool {
+func isProtectedBranch(branchName string, protectedBranches []string) (bool, error) {
 	for _, pattern := range protectedBranches {
-		if matched, _ := path.Match(pattern, branchName); matched {
-			return true
+		matched, err := path.Match(pattern, branchName)
+		if err != nil {
+			return false, fmt.Errorf("invalid protect pattern %q: %w", pattern, err)
+		}
+		if matched {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func isAlreadyTagged(commitMessage string) bool {
