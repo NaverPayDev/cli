@@ -1,5 +1,15 @@
 # @naverpay/commithelper-go
 
+## 1.2.0
+
+### Minor Changes
+
+-   becbe27: Support glob-style wildcard patterns in protect option
+
+### Patch Changes
+
+-   5e93334: Return error for invalid protect patterns instead of silently ignoring them
+
 ## 1.1.0
 
 ### Minor Changes
