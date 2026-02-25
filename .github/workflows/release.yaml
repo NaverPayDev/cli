@@ -38,7 +38,7 @@ jobs:
         outputs:
             published: ${{ steps.publish_release.outputs.published || steps.publish_canary.outputs.published || steps.publish_rc.outputs.published }}
             commithelperGoWillBePublished: ${{ steps.checkCommitHelperGo.outputs.commithelperGoWillBePublished }}
-            packageVersion: ${{ steps.checkCommitHelperGo.outputs.publishedVersion || steps.getCommitHelperGoVersion.outputs.packageVersion }}
+            packageVersion: ${{ steps.checkCommitHelperGo.outputs.publishedVersion }}
         env:
             SKIP_COMMIT_HELPER_POSTINSTALL: 1
             GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
@@ -74,12 +74,6 @@ jobs:
 
             - name: installDependencies
               run: pnpm install --frozen-lockfile
-
-            - name: getCommitHelperGoVersion
-              id: getCommitHelperGoVersion
-              run: |
-                  packageVersion=$(cat packages/commithelper-go/package.json | jq -r '.version')
-                  echo "packageVersion=$packageVersion" >> $GITHUB_OUTPUT
 
             - name: buildNodePackages
               run: pnpm build
@@ -132,7 +126,11 @@ jobs:
               id: checkCommitHelperGo
               if: always()
               run: |
+                  echo "publish_release publishedPackages: '${{ steps.publish_release.outputs.publishedPackages }}'"
+                  echo "publish_canary publishedPackages: '${{ steps.publish_canary.outputs.publishedPackages }}'"
+                  echo "publish_rc publishedPackages: '${{ steps.publish_rc.outputs.publishedPackages }}'"
                   publishedPackages='${{ steps.publish_release.outputs.publishedPackages || steps.publish_canary.outputs.publishedPackages || steps.publish_rc.outputs.publishedPackages }}'
+                  echo "resolved publishedPackages: '$publishedPackages'"
                   if [ -z "$publishedPackages" ] || [ "$publishedPackages" == "null" ]; then
                     echo "commithelperGoWillBePublished=false" >> $GITHUB_OUTPUT
                   else
@@ -149,7 +147,7 @@ jobs:
 
     upload-assets:
         needs: release
-        if: needs.release.outputs.published == 'true' && needs.release.outputs.commithelperGoWillBePublished == 'true'
+        if: always() && needs.release.outputs.published == 'true' && needs.release.outputs.commithelperGoWillBePublished == 'true'
         uses: ./.github/workflows/release-asset.yaml
         with:
             package: '@naverpay/commithelper-go'
