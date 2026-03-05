@@ -67,7 +67,28 @@ importers:
         specifier: ^5.2.2
         version: 5.3.3
 
-  packages/commithelper-go: {}
+  packages/commithelper-go:
+    optionalDependencies:
+      '@naverpay/commithelper-go-darwin-arm64':
+        specifier: workspace:*
+        version: link:../commithelper-go-darwin-arm64
+      '@naverpay/commithelper-go-darwin-x64':
+        specifier: workspace:*
+        version: link:../commithelper-go-darwin-x64
+      '@naverpay/commithelper-go-linux-x64':
+        specifier: workspace:*
+        version: link:../commithelper-go-linux-x64
+      '@naverpay/commithelper-go-win32-x64':
+        specifier: workspace:*
+        version: link:../commithelper-go-win32-x64
+
+  packages/commithelper-go-darwin-arm64: {}
+
+  packages/commithelper-go-darwin-x64: {}
+
+  packages/commithelper-go-linux-x64: {}
+
+  packages/commithelper-go-win32-x64: {}
 
   packages/fmb:
     dependencies:
