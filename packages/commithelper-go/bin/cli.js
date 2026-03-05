@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const {spawnSync} = require('child_process')
+const fs = require('fs')
 const {platform, arch} = require('os')
 const path = require('path')
 
@@ -24,6 +25,9 @@ try {
     const pkgDir = path.dirname(require.resolve(`${pkgName}/package.json`))
     const binaryName = platform() === 'win32' ? 'commithelper-go.exe' : 'commithelper-go'
     binaryPath = path.join(pkgDir, binaryName)
+    try {
+        fs.chmodSync(binaryPath, 0o755)
+    } catch (_) {}
 } catch (e) {
     // eslint-disable-next-line no-console
     console.error(`Platform package ${pkgName} is not installed. Please reinstall @naverpay/commithelper-go.`)
