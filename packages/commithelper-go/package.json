@@ -11,17 +11,21 @@
     },
     "homepage": "https://github.com/NaverPayDev/cli/tree/main/packages/commithelper-go",
     "scripts": {
-        "build:windows": "GOOS=windows GOARCH=amd64 go build -o dist/commithelper-go-windows-amd64.exe main.go",
-        "build:macos:amd64": "GOOS=darwin GOARCH=amd64 go build -o dist/commithelper-go-darwin-amd64 main.go",
-        "build:macos:arm64": "GOOS=darwin GOARCH=arm64 go build -o dist/commithelper-go-darwin-arm64 main.go",
-        "build:linux": "GOOS=linux GOARCH=amd64 go build -o dist/commithelper-go-linux-amd64 main.go",
-        "build": "pnpm build:windows && pnpm build:macos:amd64 && pnpm build:macos:arm64 && pnpm build:linux",
-        "postinstall": "node ./scripts/downloadBinary.js"
+        "build:windows": "GOOS=windows GOARCH=amd64 go build -o ../commithelper-go-win32-x64/commithelper-go.exe main.go",
+        "build:macos:amd64": "GOOS=darwin GOARCH=amd64 go build -o ../commithelper-go-darwin-x64/commithelper-go main.go",
+        "build:macos:arm64": "GOOS=darwin GOARCH=arm64 go build -o ../commithelper-go-darwin-arm64/commithelper-go main.go",
+        "build:linux": "GOOS=linux GOARCH=amd64 go build -o ../commithelper-go-linux-x64/commithelper-go main.go",
+        "build": "pnpm build:windows && pnpm build:macos:amd64 && pnpm build:macos:arm64 && pnpm build:linux"
+    },
+    "optionalDependencies": {
+        "@naverpay/commithelper-go-darwin-arm64": "workspace:*",
+        "@naverpay/commithelper-go-darwin-x64": "workspace:*",
+        "@naverpay/commithelper-go-linux-x64": "workspace:*",
+        "@naverpay/commithelper-go-win32-x64": "workspace:*"
     },
     "author": "",
     "license": "MIT",
     "files": [
-        "bin",
-        "scripts"
+        "bin"
     ]
 }

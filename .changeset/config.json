@@ -2,7 +2,15 @@
     "$schema": "https://unpkg.com/@changesets/config@2.3.1/schema.json",
     "changelog": "@changesets/cli/changelog",
     "commit": false,
-    "fixed": [],
+    "fixed": [
+        [
+            "@naverpay/commithelper-go",
+            "@naverpay/commithelper-go-darwin-arm64",
+            "@naverpay/commithelper-go-darwin-x64",
+            "@naverpay/commithelper-go-linux-x64",
+            "@naverpay/commithelper-go-win32-x64"
+        ]
+    ],
     "linked": [],
     "access": "public",
     "baseBranch": "main",

@@ -1,5 +1,6 @@
 {
     "name": "@naverpay/cli",
+    "private": true,
     "author": "@NaverPayDev/frontend",
     "repository": {
         "type": "git",
@@ -36,10 +37,8 @@
         "@naverpay/prettier-config": "^0.0.2",
         "@size-limit/preset-big-lib": "^11.0.2",
         "@types/node": "^20.12.7",
-        "glob": "^9.3.4",
         "husky": "^8.0.3",
         "lint-staged": "^15.0.1",
-        "size-limit": "^11.0.2",
         "turbo": "^1.10.16",
         "typescript": "^5.2.2"
     },

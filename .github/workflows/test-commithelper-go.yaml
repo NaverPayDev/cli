@@ -1,0 +1,72 @@
+name: test commithelper-go
+
+on:
+    pull_request:
+        paths:
+            - 'packages/commithelper-go/**'
+            - 'packages/commithelper-go-*/**'
+
+jobs:
+    test:
+        strategy:
+            matrix:
+                include:
+                    - os: ubuntu-latest
+                      goos: linux
+                      goarch: amd64
+                      binary: commithelper-go
+                      pkg: commithelper-go-linux-x64
+                    - os: macos-latest
+                      goos: darwin
+                      goarch: arm64
+                      binary: commithelper-go
+                      pkg: commithelper-go-darwin-arm64
+                    - os: windows-latest
+                      goos: windows
+                      goarch: amd64
+                      binary: commithelper-go.exe
+                      pkg: commithelper-go-win32-x64
+
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Go
+              uses: actions/setup-go@v4
+              with:
+                  go-version: '1.24'
+
+            - uses: pnpm/action-setup@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20.x'
+                  cache: 'pnpm'
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build binary
+              working-directory: packages/commithelper-go
+              run: go build -o ../commithelper-go-${{ matrix.goos }}-test/${{ matrix.binary }} main.go
+              env:
+                  GOOS: ${{ matrix.goos }}
+                  GOARCH: ${{ matrix.goarch }}
+
+            - name: Copy binary to platform package
+              shell: bash
+              run: cp packages/commithelper-go-${{ matrix.goos }}-test/${{ matrix.binary }} packages/${{ matrix.pkg }}/${{ matrix.binary }}
+
+            - name: Verify binary exists
+              shell: bash
+              run: ls -la packages/${{ matrix.pkg }}/${{ matrix.binary }}
+
+            - name: Test CLI execution
+              shell: bash
+              run: |
+                  chmod +x packages/${{ matrix.pkg }}/${{ matrix.binary }}
+                  echo "test commit message" > /tmp/test-msg.txt
+                  node packages/commithelper-go/bin/cli.js /tmp/test-msg.txt
+                  echo "CLI executed successfully with exit code $?"
