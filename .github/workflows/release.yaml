@@ -37,10 +37,7 @@ jobs:
              (github.event_name == 'issue_comment' && needs.get-branch.result == 'success'))
         outputs:
             published: ${{ steps.publish_release.outputs.published || steps.publish_canary.outputs.published || steps.publish_rc.outputs.published }}
-            commithelperGoWillBePublished: ${{ steps.checkCommitHelperGo.outputs.commithelperGoWillBePublished }}
-            packageVersion: ${{ steps.checkCommitHelperGo.outputs.publishedVersion }}
         env:
-            SKIP_COMMIT_HELPER_POSTINSTALL: 1
             GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         steps:
@@ -121,35 +118,3 @@ jobs:
                   create_release: true
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Check if commithelper-go was published
-              id: checkCommitHelperGo
-              if: always()
-              run: |
-                  echo "publish_release publishedPackages: '${{ steps.publish_release.outputs.publishedPackages }}'"
-                  echo "publish_canary publishedPackages: '${{ steps.publish_canary.outputs.publishedPackages }}'"
-                  echo "publish_rc publishedPackages: '${{ steps.publish_rc.outputs.publishedPackages }}'"
-                  publishedPackages='${{ steps.publish_release.outputs.publishedPackages || steps.publish_canary.outputs.publishedPackages || steps.publish_rc.outputs.publishedPackages }}'
-                  echo "resolved publishedPackages: '$publishedPackages'"
-                  if [ -z "$publishedPackages" ] || [ "$publishedPackages" == "null" ]; then
-                    echo "commithelperGoWillBePublished=false" >> $GITHUB_OUTPUT
-                  else
-                    commithelperGo=$(echo "$publishedPackages" | jq -r '.[] | select(.name == "@naverpay/commithelper-go")')
-                    if [ -n "$commithelperGo" ] && [ "$commithelperGo" != "null" ]; then
-                      echo "commithelperGoWillBePublished=true" >> $GITHUB_OUTPUT
-                      # Extract the actual published version (handles canary/RC versions)
-                      version=$(echo "$commithelperGo" | jq -r '.version')
-                      echo "publishedVersion=$version" >> $GITHUB_OUTPUT
-                    else
-                      echo "commithelperGoWillBePublished=false" >> $GITHUB_OUTPUT
-                    fi
-                  fi
-
-    upload-assets:
-        needs: release
-        if: always() && needs.release.outputs.published == 'true' && needs.release.outputs.commithelperGoWillBePublished == 'true'
-        uses: ./.github/workflows/release-asset.yaml
-        with:
-            package: '@naverpay/commithelper-go'
-            version: ${{ needs.release.outputs.packageVersion }}
-        secrets: inherit
