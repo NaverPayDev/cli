@@ -28,7 +28,7 @@ npm install -g @naverpay/commithelper-go
 ### .husky/commit-msg
 
 ```bash
-npx --yes @naverpay/commithelper-go@latest "$1"
+node node_modules/@naverpay/commithelper-go/bin/cli.js "$1"
 ```
 
 > `@latest` is not necessary but this option always provides latest version of commithelper-go.
@@ -39,14 +39,14 @@ npx --yes @naverpay/commithelper-go@latest "$1"
 commit-msg:
   commands:
     commithelper:
-      run: npx --yes @naverpay/commithelper-go@latest {1}
+      run: node node_modules/@naverpay/commithelper-go/bin/cli.js {1}
 ```
 
-### Manual execution
-
-```bash
-npx @naverpay/commithelper-go "your commit message"
-```
+> [!TIP]
+>
+> `npx` adds ~460ms of overhead even when the package is installed locally.
+> Calling `node cli.js` directly takes ~76ms — **about 6x faster** than `npx`.
+> For hooks that run on every commit, direct `node` invocation is recommended.
 
 ## What it does
 
@@ -125,7 +125,7 @@ This is Basic rule of `.commithelperrc.json`.
     "rules": {
         "feature": null
     },
-    "template": "{{.Message}}\n\nRef. #{{.Number}}"
+    "template": "{{.Message}}\n\nRef. [#{{.Number}}]"
 }
 ```
 
@@ -134,7 +134,7 @@ Result:
 ```
 :memo: Update documentation
 
-Ref. #123
+Ref. [#123]
 ```
 
 **Example 2: Custom format with repository**
@@ -192,25 +192,9 @@ Result:
 > - commit on `qa/1` branch will be tagged as `[your-org/your-repo#1]`.
 > - direct commit attempt toward `main`, `master`, `develop`, `epic/*` branch will be blocked
 
-## Environment Variables
-
-### SKIP_COMMIT_HELPER_POSTINSTALL
-
-You can skip the postinstall script (binary download) by setting the `SKIP_COMMIT_HELPER_POSTINSTALL` environment variable:
-
-```bash
-SKIP_COMMIT_HELPER_POSTINSTALL=1 npm install @naverpay/commithelper-go
-```
-
-This is useful in environments where:
-
-- Network access is restricted
-- You want to manage binary installation manually
-- Running in CI/CD environments where postinstall scripts should be skipped
-
 ## Platform Support
 
-The CLI automatically downloads the appropriate binary for your platform during installation:
+The appropriate platform-specific binary package is automatically installed via `optionalDependencies`.
 
 - **macOS**: Intel (x64) and Apple Silicon (arm64)
 - **Linux**: x64
