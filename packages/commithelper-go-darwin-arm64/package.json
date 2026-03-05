@@ -1,0 +1,20 @@
+{
+    "name": "@naverpay/commithelper-go-darwin-arm64",
+    "version": "1.2.0",
+    "description": "macOS ARM64 binary for @naverpay/commithelper-go",
+    "os": [
+        "darwin"
+    ],
+    "cpu": [
+        "arm64"
+    ],
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/NaverPayDev/cli/tree/main/packages/commithelper-go-darwin-arm64"
+    },
+    "homepage": "https://github.com/NaverPayDev/cli/tree/main/packages/commithelper-go-darwin-arm64",
+    "files": [
+        "commithelper-go"
+    ]
+}
