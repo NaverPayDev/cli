@@ -142,7 +142,7 @@ func loadConfig() Config {
 }
 
 func generatePrefix(branchName string, config Config) string {
-	pattern := regexp.MustCompile(`^(\w+)/(\d+).*`)
+	pattern := regexp.MustCompile(`^([\w-]+)/(\d+).*`)
 	matches := pattern.FindStringSubmatch(branchName)
 	if len(matches) < 3 {
 		return ""
@@ -164,7 +164,7 @@ func generatePrefix(branchName string, config Config) string {
 }
 
 func generateTemplateData(branchName string, config Config, message string) *TemplateData {
-	pattern := regexp.MustCompile(`^(\w+)/(\d+).*`)
+	pattern := regexp.MustCompile(`^([\w-]+)/(\d+).*`)
 	matches := pattern.FindStringSubmatch(branchName)
 	if len(matches) < 3 {
 		return nil
