@@ -1,5 +1,11 @@
 # @naverpay/commithelper-go
 
+## 1.3.1
+
+### Patch Changes
+
+-   860f7da: fix: branch prefix with hyphens not being matched
+
 ## 1.3.0
 
 ### Minor Changes
