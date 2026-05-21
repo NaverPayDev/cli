@@ -1,6 +1,6 @@
 import {exec} from 'child_process'
 import fs from 'fs/promises'
-import {join} from 'path'
+import {isAbsolute, join} from 'path'
 import process from 'process'
 
 import {cosmiconfigSync} from 'cosmiconfig'
@@ -182,7 +182,7 @@ export async function run() {
     }
 
     const commitMessagePath = cli.input[0]
-    const commitFilePath = join(process.cwd(), commitMessagePath)
+    const commitFilePath = isAbsolute(commitMessagePath) ? commitMessagePath : join(process.cwd(), commitMessagePath)
     const commitMessage = await fs.readFile(commitFilePath, 'utf8')
 
     if (!commitMessage) {
