@@ -86,11 +86,54 @@ This is Basic rule of `.commithelperrc.json`.
 }
 ```
 
+#### $schema (optional — editor autocompletion)
+
+Add a `$schema` reference so your editor offers autocompletion, inline docs, and validation while editing `.commithelperrc.json`. The schema ships inside the installed package, so a relative path works offline (no CDN, Nexus-friendly):
+
+```json
+{
+    "$schema": "./node_modules/@naverpay/commithelper-go/schema.json",
+    "rules": { "feature": null }
+}
+```
+
+> Prefer the relative path above (resolved from the installed package) over a public CDN URL — consistent with this package shipping everything locally.
+
 #### rules
 
 - Key of rules field means branch prefix. By `feature` key, this rule is applied to branches named using the `feature/***` pattern.
 - Value represents the repository to be tagged. For example, rule with value 'your-org/your-repo' tags 'your-org/your-repo#1'.
 - A rule with a `null` value tags repository itself.
+
+#### passthrough
+
+For trackers whose issue key already contains the project (e.g. Jira/Linear `PROJ-123`), the branch carries the full key — there is nothing to look up. `passthrough` declares which keys are copied **verbatim** into the commit message, as opposed to `rules`, which translate a prefix into a repo reference.
+
+- Array form — recognize only the listed project keys:
+
+  ```json
+  { "passthrough": ["PROJ", "OPS"] }
+  ```
+
+  A branch like `feature/PROJ-1871` is tagged `[PROJ-1871]`. `OPS-9` is tagged only if `OPS` is listed.
+
+- `"uppercase"` — recognize **any** uppercase key shape, without listing projects:
+
+  ```json
+  { "passthrough": "uppercase" }
+  ```
+
+  Convenient, but it tags any `UPPERCASE-NUMBER` token, including non-tracker ones (e.g. a branch `chore/UTF-8-fix` becomes `[UTF-8]`).
+
+- Omit the field to disable verbatim tagging (GitHub-style `rules` still apply).
+
+Recognition rules (a key must be linkable by the tracker):
+
+- The project part is uppercase letters/digits (`[A-Z][A-Z0-9]+`); the number is 1–7 digits.
+- A key immediately followed by `_` or `-<digit>` is **not** recognized (e.g. `PROJ-1871_wip`, `PROJ-1871-20260101`) — use `-<letter>` for a description suffix (`PROJ-1871-add-login`).
+- Array entries that are not valid key shapes (e.g. lowercase) are ignored with a warning. The all-mode is the string `"uppercase"`; a lowercase entry inside the array (e.g. `["uppercase"]`) is treated as an invalid key, not the all-mode.
+
+`rules` (GitHub prefixes) take precedence over `passthrough` when a branch matches both.
 
 #### protect
 
@@ -114,7 +157,8 @@ This is Basic rule of `.commithelperrc.json`.
   - `{{.Message}}`: Original commit message
   - `{{.Number}}`: Issue number extracted from branch name
   - `{{.Repo}}`: Repository name (empty string if not specified in rules)
-  - `{{.Prefix}}`: Full prefix (`#123` or `org/repo#123`)
+  - `{{.Prefix}}`: Full reference (`#123`, `org/repo#123`, or a verbatim key like `PROJ-1871`)
+- For `passthrough` (verbatim) branches, `{{.Prefix}}` is the key itself while `{{.Number}}` and `{{.Repo}}` are empty — prefer `{{.Prefix}}` for templates that must work with both styles.
 
 ##### Template Examples
 
