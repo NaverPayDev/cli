@@ -13,10 +13,44 @@ import (
 	"text/template"
 )
 
+// Passthrough declares which verbatim issue keys (e.g. "PROJ" in
+// "PROJ-1871") the helper copies straight into the commit message —
+// unchanged — as opposed to `rules`, which translate a prefix into a repo
+// reference. In JSON it is either the string "uppercase" (recognize any
+// uppercase key shape) or an array of project keys (recognize only those).
+// Absent/null = off.
+type Passthrough struct {
+	All  bool
+	Keys []string
+}
+
+func (p *Passthrough) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		if s != "uppercase" {
+			return fmt.Errorf("passthrough: string value must be %q, got %q", "uppercase", s)
+		}
+		p.All = true
+		return nil
+	}
+
+	var arr []string
+	if err := json.Unmarshal(data, &arr); err != nil {
+		return fmt.Errorf("passthrough: must be %q or an array of key strings", "uppercase")
+	}
+	p.Keys = arr
+	return nil
+}
+
 type Config struct {
-	Rules    map[string]*string `json:"rules"`
-	Protect  []string           `json:"protect"`
-	Template *string            `json:"template,omitempty"`
+	Rules       map[string]*string `json:"rules"`
+	Passthrough Passthrough        `json:"passthrough"`
+	Protect     []string           `json:"protect"`
+	Template    *string            `json:"template,omitempty"`
 }
 
 type TemplateData struct {
@@ -26,6 +60,16 @@ type TemplateData struct {
 	Prefix  string
 }
 
+var (
+	// GitHub-style branch: <prefix>/<number>. The prefix is translated to a
+	// repo via Config.Rules; the number becomes the issue reference.
+	prefixPattern = regexp.MustCompile(`^([\w-]+)/(\d+)`)
+	// Verbatim issue-key shape (uppercase project + number), used for the
+	// "uppercase" mode and for validating declared keys.
+	anyKeyPattern   = regexp.MustCompile(`\b([A-Z][A-Z0-9]+)-(\d{1,7})\b`)
+	keyShapePattern = regexp.MustCompile(`^[A-Z][A-Z0-9]+$`)
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: commithelper-go <commit-message-file-or-text>")
@@ -33,10 +77,11 @@ func main() {
 	}
 
 	input := os.Args[1]
+	isFile := false
 	var commitMessage string
 
 	if _, err := os.Stat(input); err == nil {
-		// Input is a file path
+		isFile = true
 		commitMessageBytes, err := ioutil.ReadFile(input)
 		if err != nil {
 			fmt.Printf("Error reading commit message file: %v\n", err)
@@ -44,57 +89,161 @@ func main() {
 		}
 		commitMessage = string(commitMessageBytes)
 	} else {
-		// Input is a direct commit message
 		commitMessage = input
-	}
-
-	// Check if commit message is already tagged
-	if isAlreadyTagged(commitMessage) {
-		// Do not modify if already tagged
-		if _, err := os.Stat(input); err == nil {
-			// Write back unchanged if input was a file
-			err = ioutil.WriteFile(input, []byte(commitMessage), 0644)
-			if err != nil {
-				fmt.Printf("Error writing to commit message file: %v\n", err)
-				os.Exit(1)
-			}
-		} else {
-			// Print unchanged if input was a direct message
-			fmt.Println(commitMessage)
-		}
-		return
 	}
 
 	branchName := getCurrentBranchName()
 	config := loadConfig()
 
-	// Check if current branch is protected
-	protected, err := isProtectedBranch(branchName, config.Protect)
+	result, err := processMessage(commitMessage, branchName, config)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
-	if protected {
-		fmt.Printf("Error: Cannot commit to protected branch '%s'\n", branchName)
-		os.Exit(1)
-	}
 
-	templateData := generateTemplateData(branchName, config, commitMessage)
-	if templateData != nil {
-		commitMessage = applyTemplate(config, templateData)
-	}
-
-	if _, err := os.Stat(input); err == nil {
-		// Write back to the file if input was a file
-		err = ioutil.WriteFile(input, []byte(commitMessage), 0644)
-		if err != nil {
+	if isFile {
+		if err := ioutil.WriteFile(input, []byte(result), 0644); err != nil {
 			fmt.Printf("Error writing to commit message file: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
-		// Print the result if input was a direct message
-		fmt.Println(commitMessage)
+		fmt.Println(result)
 	}
+}
+
+// processMessage is the pure core: it gates protected branches, resolves the
+// issue reference from the branch, and tags the message idempotently.
+func processMessage(message, branch string, config Config) (string, error) {
+	protected, err := isProtectedBranch(branch, config.Protect)
+	if err != nil {
+		return "", err
+	}
+	if protected {
+		return "", fmt.Errorf("cannot commit to protected branch %q", branch)
+	}
+
+	td := resolve(branch, config)
+	if td == nil {
+		return message, nil
+	}
+	if alreadyHasRef(message, td.Prefix) {
+		return message, nil
+	}
+
+	td.Message = message
+	return applyTemplate(config, td), nil
+}
+
+// resolve maps a branch to an issue reference, trying the GitHub-style prefix
+// rules first, then verbatim passthrough keys.
+func resolve(branch string, config Config) *TemplateData {
+	if td := resolvePrefix(branch, config); td != nil {
+		return td
+	}
+	return resolveVerbatim(branch, config.Passthrough)
+}
+
+// resolvePrefix translates a "<prefix>/<number>" branch into a reference using
+// Config.Rules (nil value → "#N", repo value → "repo#N").
+func resolvePrefix(branch string, config Config) *TemplateData {
+	matches := prefixPattern.FindStringSubmatch(branch)
+	if len(matches) < 3 {
+		return nil
+	}
+
+	prefixKey := matches[1]
+	issueNumber := matches[2]
+
+	repo, exists := config.Rules[prefixKey]
+	if !exists {
+		return nil
+	}
+
+	if repo == nil {
+		return &TemplateData{
+			Number: issueNumber,
+			Prefix: fmt.Sprintf("#%s", issueNumber),
+		}
+	}
+	return &TemplateData{
+		Number: issueNumber,
+		Repo:   *repo,
+		Prefix: fmt.Sprintf("%s#%s", *repo, issueNumber),
+	}
+}
+
+// resolveVerbatim finds an uppercase issue key in the branch and copies it
+// as-is. Only keys allowed by Passthrough are recognized.
+func resolveVerbatim(branch string, pt Passthrough) *TemplateData {
+	var pattern *regexp.Regexp
+	if pt.All {
+		pattern = anyKeyPattern
+	} else {
+		valid := validKeys(pt.Keys)
+		if len(valid) == 0 {
+			return nil
+		}
+		pattern = buildKeyPattern(valid)
+	}
+
+	// Strict: mirror Jigit's (?!-\d). A key immediately followed by "-<digit>"
+	// (e.g. a date suffix) is not recognized; skip it and try the next match so
+	// a valid key later in the branch is still found.
+	for _, loc := range pattern.FindAllStringSubmatchIndex(branch, -1) {
+		end := loc[1]
+		if end+1 < len(branch) && branch[end] == '-' && isDigit(branch[end+1]) {
+			continue
+		}
+		return &TemplateData{Prefix: branch[loc[0]:loc[1]]}
+	}
+	return nil
+}
+
+// validKeys keeps only entries shaped like an uppercase project key. Invalid
+// entries would never link, so they are warned about and skipped.
+func validKeys(keys []string) []string {
+	valid := make([]string, 0, len(keys))
+	for _, k := range keys {
+		if keyShapePattern.MatchString(k) {
+			valid = append(valid, k)
+		} else {
+			fmt.Fprintf(os.Stderr, "commithelper: ignoring invalid passthrough entry %q (must match [A-Z][A-Z0-9]+)\n", k)
+		}
+	}
+	return valid
+}
+
+func buildKeyPattern(keys []string) *regexp.Regexp {
+	quoted := make([]string, len(keys))
+	for i, k := range keys {
+		quoted[i] = regexp.QuoteMeta(k)
+	}
+	return regexp.MustCompile(`\b(` + strings.Join(quoted, "|") + `)-(\d{1,7})\b`)
+}
+
+// alreadyHasRef reports whether the resolved reference is already present in
+// the message, so re-runs (e.g. git commit --amend) do not tag twice. The
+// reference must appear as a whole token, not as part of a longer number
+// (so "#123" does not match "#1234").
+func alreadyHasRef(message, ref string) bool {
+	if ref == "" {
+		return false
+	}
+	for from := 0; from <= len(message); {
+		j := strings.Index(message[from:], ref)
+		if j < 0 {
+			return false
+		}
+		start := from + j
+		end := start + len(ref)
+		beforeOK := start == 0 || !isWordByte(message[start-1])
+		afterOK := end >= len(message) || !isDigit(message[end])
+		if beforeOK && afterOK {
+			return true
+		}
+		from = start + 1
+	}
+	return false
 }
 
 func getCurrentBranchName() string {
@@ -141,61 +290,6 @@ func loadConfig() Config {
 	return config
 }
 
-func generatePrefix(branchName string, config Config) string {
-	pattern := regexp.MustCompile(`^([\w-]+)/(\d+).*`)
-	matches := pattern.FindStringSubmatch(branchName)
-	if len(matches) < 3 {
-		return ""
-	}
-
-	prefixKey := matches[1]
-	issueNumber := matches[2]
-
-	repo, exists := config.Rules[prefixKey]
-	if !exists {
-		return ""
-	}
-
-	if repo == nil {
-		return fmt.Sprintf("#%s", issueNumber)
-	}
-
-	return fmt.Sprintf("%s#%s", *repo, issueNumber)
-}
-
-func generateTemplateData(branchName string, config Config, message string) *TemplateData {
-	pattern := regexp.MustCompile(`^([\w-]+)/(\d+).*`)
-	matches := pattern.FindStringSubmatch(branchName)
-	if len(matches) < 3 {
-		return nil
-	}
-
-	prefixKey := matches[1]
-	issueNumber := matches[2]
-
-	repo, exists := config.Rules[prefixKey]
-	if !exists {
-		return nil
-	}
-
-	var repoName string
-	var prefix string
-	if repo == nil {
-		repoName = ""
-		prefix = fmt.Sprintf("#%s", issueNumber)
-	} else {
-		repoName = *repo
-		prefix = fmt.Sprintf("%s#%s", *repo, issueNumber)
-	}
-
-	return &TemplateData{
-		Message: message,
-		Number:  issueNumber,
-		Repo:    repoName,
-		Prefix:  prefix,
-	}
-}
-
 func applyTemplate(config Config, data *TemplateData) string {
 	// If no template is configured, use default format
 	if config.Template == nil || *config.Template == "" {
@@ -233,12 +327,11 @@ func isProtectedBranch(branchName string, protectedBranches []string) (bool, err
 	return false, nil
 }
 
-func isAlreadyTagged(commitMessage string) bool {
-	// Check if commit message already contains issue tag like [#123] or [org/repo#123]
-	// This pattern matches:
-	// - [#123] (simple issue number)
-	// - [Some-Org/Some_Repo#123] (complex repo with special chars)
-	pattern := regexp.MustCompile(`^\[.*?#\d+\]`)
-	trimmedMessage := strings.TrimSpace(commitMessage)
-	return pattern.MatchString(trimmedMessage)
+func isDigit(b byte) bool { return b >= '0' && b <= '9' }
+
+func isWordByte(b byte) bool {
+	return b == '_' ||
+		(b >= '0' && b <= '9') ||
+		(b >= 'a' && b <= 'z') ||
+		(b >= 'A' && b <= 'Z')
 }
