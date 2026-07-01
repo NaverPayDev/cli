@@ -30,8 +30,6 @@ async function getCurrentBranchName(): Promise<string> {
     })
 }
 
-// resolvePrefix: "<prefix>/<number>" 브랜치를 rules 로 참조 문자열로 변환한다.
-// null 값 → "#N", repo 값 → "repo#N", 매칭/미등록이면 null.
 function resolvePrefix(branchName: string, issueMap: Record<string, string | null>): string | null {
     const foundedIssueTagging = branchName.match(BRANCH_ISSUE_TAGGING_REGEX)
 
@@ -65,8 +63,7 @@ function resolvePrefix(branchName: string, issueMap: Record<string, string | nul
     return null
 }
 
-// resolveKey: Jira/Linear 스타일 키(PROJ-1871)를 브랜치에서 그대로 가져온다.
-// passthrough 에 등록된 프로젝트만, Jigit 규칙(<KEY>-<1~7자리 숫자>)으로 인식한다.
+// passthrough 에 등록된 프로젝트 키만 인식한다 (Jigit 규칙: <KEY>-<1~7자리 숫자>).
 export function resolveKey(branchName: string, passthrough?: string[]): string | null {
     if (!passthrough || passthrough.length === 0) {
         return null
@@ -88,8 +85,7 @@ function isKeyByte(char: string): boolean {
     return /[-\w]/.test(char)
 }
 
-// alreadyHasRef: 해결된 참조가 이미 온전한 토큰으로 존재하는지 확인한다
-// ("#123" 이 "#1234" 안에서 매칭되지 않도록). 재실행/`git commit --amend` 멱등성.
+// 재실행·amend 때 같은 태그가 중복으로 붙지 않도록, 이 참조가 메시지에 그대로 있는지 확인한다 ("#123" 은 "#1234" 에 매칭되지 않음).
 export function alreadyHasRef(message: string, ref: string): boolean {
     if (ref === '') {
         return false
@@ -131,14 +127,12 @@ export function getCommitMessageByBranchName(
         ...externalConfig,
     } as Record<string, string | null>
 
-    // GitHub 스타일 prefix 규칙을 먼저, 없으면 passthrough 키를 그대로 사용한다.
     const ref = resolvePrefix(branchName, issueMap) ?? resolveKey(branchName, passthrough)
 
     if (!ref) {
         return originCommitMessage
     }
 
-    // 이미 이 브랜치의 참조가 있으면 중복 태깅하지 않는다.
     if (alreadyHasRef(originCommitMessage, ref)) {
         return originCommitMessage
     }
