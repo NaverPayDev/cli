@@ -240,6 +240,11 @@ func TestProcessMessage(t *testing.T) {
 		Protect:  []string{"main"},
 		Template: strPtr("{{.Message}}\n\nRef. [{{.Prefix}}]"),
 	}
+	numberTmpl := Config{
+		Passthrough: []string{"PROJ"},
+		Protect:     []string{"main"},
+		Template:    strPtr("{{.Message}} (issue #{{.Number}})"),
+	}
 
 	tests := []struct {
 		name      string
@@ -259,6 +264,7 @@ func TestProcessMessage(t *testing.T) {
 		{"custom template idempotent on amend (D1)", "fix\n\nRef. [#123]", "feature/123", bottomRef, "fix\n\nRef. [#123]", false},
 		{"embedded key not treated as tagged", "[MY-PROJ-1871] earlier", "feature/PROJ-1871", verbatim, "[PROJ-1871] [MY-PROJ-1871] earlier", false},
 		{"key before a letter not treated as tagged", "work on PROJ-1abc", "feature/PROJ-1", verbatim, "[PROJ-1] work on PROJ-1abc", false},
+		{"passthrough fills Number for custom template", "fix", "feature/PROJ-123", numberTmpl, "fix (issue #123)", false},
 	}
 
 	for _, tt := range tests {

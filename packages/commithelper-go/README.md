@@ -172,7 +172,7 @@ A branch like `feature/PROJ-1871` is tagged `[PROJ-1871]`. Only listed projects 
   - `{{.Number}}`: Issue number extracted from branch name
   - `{{.Repo}}`: Repository name (empty string if not specified in rules)
   - `{{.Prefix}}`: Full reference (`#123`, `org/repo#123`, or a verbatim key like `PROJ-1871`)
-- For `passthrough` (verbatim) branches, `{{.Prefix}}` is the key itself while `{{.Number}}` and `{{.Repo}}` are empty — prefer `{{.Prefix}}` for templates that must work with both styles.
+- For `passthrough` (verbatim) branches, `{{.Prefix}}` is the full key (e.g. `PROJ-123`) and `{{.Number}}` its number (`123`), while `{{.Repo}}` is empty — prefer `{{.Prefix}}` for templates that must work with both styles.
 - Put the reference in your template as `{{.Prefix}}` for safe re-tagging: commithelper skips an already-tagged message by looking for that exact reference, so rendering it another way (e.g. `#{{.Number}}` for a repo-scoped or verbatim rule) can add it twice on `git commit --amend`.
 
 ##### Template Examples

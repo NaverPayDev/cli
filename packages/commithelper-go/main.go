@@ -146,7 +146,7 @@ func resolveKey(branch string, passthrough []string) *TemplateData {
 	}
 	for _, m := range keyPattern.FindAllStringSubmatch(branch, -1) {
 		if len(m[2]) <= 7 && allowed[m[1]] {
-			return &TemplateData{Prefix: m[0]}
+			return &TemplateData{Prefix: m[0], Number: m[2]}
 		}
 	}
 	return nil
