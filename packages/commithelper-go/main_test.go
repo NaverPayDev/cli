@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"testing"
 )
 
@@ -84,31 +83,31 @@ func TestResolvePrefix(t *testing.T) {
 	}
 }
 
-func TestResolveVerbatim(t *testing.T) {
+func TestResolveKey(t *testing.T) {
 	tests := []struct {
-		name       string
-		pt         Passthrough
-		branch     string
-		wantNil    bool
-		wantPrefix string
+		name        string
+		passthrough []string
+		branch      string
+		wantNil     bool
+		wantPrefix  string
 	}{
-		{"listed key", Passthrough{Keys: []string{"PROJ"}}, "feature/PROJ-1871", false, "PROJ-1871"},
-		{"bare key no prefix", Passthrough{Keys: []string{"PROJ"}}, "PROJ-1871", false, "PROJ-1871"},
-		{"key with description suffix", Passthrough{Keys: []string{"PROJ"}}, "feature/PROJ-1871-add-login", false, "PROJ-1871"},
-		{"unlisted project", Passthrough{Keys: []string{"PROJ"}}, "feature/OPS-42", true, ""},
-		{"underscore suffix rejected (strict)", Passthrough{Keys: []string{"PROJ"}}, "feature/PROJ-1871_wip", true, ""},
-		{"trailing -digit rejected (strict)", Passthrough{Keys: []string{"PROJ"}}, "feature/PROJ-1871-2024", true, ""},
-		{"later valid key found after rejected one", Passthrough{All: true}, "feature/AB-12-34-CD-5", false, "CD-5"},
-		{"all matches any shape", Passthrough{All: true}, "feature/OPS-42", false, "OPS-42"},
-		{"all accepts non-tracker token (false positive)", Passthrough{All: true}, "chore/UTF-8-fix", false, "UTF-8"},
-		{"invalid lowercase key filtered out", Passthrough{Keys: []string{"abc"}}, "feature/abc-1", true, ""},
-		{"off when empty", Passthrough{}, "feature/PROJ-1871", true, ""},
+		{"listed key", []string{"PROJ"}, "feature/PROJ-1871", false, "PROJ-1871"},
+		{"bare key no prefix", []string{"PROJ"}, "PROJ-1871", false, "PROJ-1871"},
+		{"description suffix", []string{"PROJ"}, "feature/PROJ-1871-add-login", false, "PROJ-1871"},
+		{"date suffix recognized (Jigit rule)", []string{"PROJ"}, "feature/PROJ-1871-20260101", false, "PROJ-1871"},
+		{"underscore recognized (Jigit rule)", []string{"PROJ"}, "feature/PROJ-1871_wip", false, "PROJ-1871"},
+		{"unlisted project", []string{"PROJ"}, "feature/OPS-42", true, ""},
+		{"eight-digit number rejected", []string{"PROJ"}, "feature/PROJ-12345678", true, ""},
+		{"project not matched inside a longer key", []string{"PROJ"}, "XPROJ-123", true, ""},
+		{"junk skipped, listed key chosen", []string{"PROJ"}, "chore/UTF-8-PROJ-123", false, "PROJ-123"},
+		{"lowercase list entry does not match", []string{"proj"}, "feature/PROJ-1", true, ""},
+		{"off when empty", nil, "feature/PROJ-1871", true, ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			td := resolveVerbatim(tt.branch, tt.pt)
+			td := resolveKey(tt.branch, tt.passthrough)
 			if tt.wantNil {
 				if td != nil {
 					t.Errorf("expected nil, got %+v", td)
@@ -125,10 +124,47 @@ func TestResolveVerbatim(t *testing.T) {
 	}
 }
 
+func TestResolveKey_JigitParity(t *testing.T) {
+	allowed := []string{"ABC"}
+	tests := []struct {
+		branch string
+		want   string
+	}{
+		{"ABC-123", "ABC-123"},
+		{"feature/ABC-123", "ABC-123"},
+		{"feature_ABC-123", "ABC-123"},
+		{"feature/ABC-123-modal", "ABC-123"},
+		{"ABC-123_modal", "ABC-123"},
+		{"[ABC-123] feature", "ABC-123"},
+		{"release/test/ABC-123/fix", "ABC-123"},
+		{"ABC-123-4", "ABC-123"},
+		{"ABC-12345678", ""},
+		{"abc-123", ""},
+		{"Abc-123", ""},
+		{"ABC_123", ""},
+		{"ABC123", ""},
+		{"ABC-abc", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.branch, func(t *testing.T) {
+			t.Parallel()
+			td := resolveKey(tt.branch, allowed)
+			got := ""
+			if td != nil {
+				got = td.Prefix
+			}
+			if got != tt.want {
+				t.Errorf("resolveKey(%q) = %q, want %q", tt.branch, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestResolve_Priority(t *testing.T) {
 	config := Config{
 		Rules:       map[string]*string{"feature": nil},
-		Passthrough: Passthrough{Keys: []string{"ABC"}},
+		Passthrough: []string{"ABC"},
 	}
 
 	tests := []struct {
@@ -176,6 +212,8 @@ func TestAlreadyHasRef(t *testing.T) {
 		{"verbatim key present", "[PROJ-1871] fix", "PROJ-1871", true},
 		{"cross-repo ref present", "[org/repo#123] fix", "org/repo#123", true},
 		{"absent", "fix login", "#123", false},
+		{"ref before a letter is not a match", "see AB-1abc here", "AB-1", false},
+		{"ref inside a longer hyphenated key is not a match", "[MY-PROJ-1871] earlier", "PROJ-1871", false},
 	}
 
 	for _, tt := range tests {
@@ -194,7 +232,7 @@ func TestProcessMessage(t *testing.T) {
 		Protect: []string{"main"},
 	}
 	verbatim := Config{
-		Passthrough: Passthrough{Keys: []string{"PROJ"}},
+		Passthrough: []string{"PROJ"},
 		Protect:     []string{"main"},
 	}
 	bottomRef := Config{
@@ -219,6 +257,8 @@ func TestProcessMessage(t *testing.T) {
 		{"verbatim tagging", "fix", "feature/PROJ-1871", verbatim, "[PROJ-1871] fix", false},
 		{"custom template tags in body", "fix", "feature/123", bottomRef, "fix\n\nRef. [#123]", false},
 		{"custom template idempotent on amend (D1)", "fix\n\nRef. [#123]", "feature/123", bottomRef, "fix\n\nRef. [#123]", false},
+		{"embedded key not treated as tagged", "[MY-PROJ-1871] earlier", "feature/PROJ-1871", verbatim, "[PROJ-1871] [MY-PROJ-1871] earlier", false},
+		{"key before a letter not treated as tagged", "work on PROJ-1abc", "feature/PROJ-1", verbatim, "[PROJ-1] work on PROJ-1abc", false},
 	}
 
 	for _, tt := range tests {
@@ -236,50 +276,6 @@ func TestProcessMessage(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("processMessage(%q, %q) = %q, want %q", tt.message, tt.branch, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPassthrough_UnmarshalJSON(t *testing.T) {
-	tests := []struct {
-		name     string
-		json     string
-		wantAll  bool
-		wantKeys []string
-		wantErr  bool
-	}{
-		{"uppercase means all", `{"passthrough":"uppercase"}`, true, nil, false},
-		{"array of keys", `{"passthrough":["PROJ","OPS"]}`, false, []string{"PROJ", "OPS"}, false},
-		{"absent means off", `{}`, false, nil, false},
-		{"null means off", `{"passthrough":null}`, false, nil, false},
-		{"other string is error", `{"passthrough":"all"}`, false, nil, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			var c Config
-			err := json.Unmarshal([]byte(tt.json), &c)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if c.Passthrough.All != tt.wantAll {
-				t.Errorf("All = %v, want %v", c.Passthrough.All, tt.wantAll)
-			}
-			if len(c.Passthrough.Keys) != len(tt.wantKeys) {
-				t.Fatalf("Keys = %v, want %v", c.Passthrough.Keys, tt.wantKeys)
-			}
-			for i := range tt.wantKeys {
-				if c.Passthrough.Keys[i] != tt.wantKeys[i] {
-					t.Errorf("Keys[%d] = %q, want %q", i, c.Passthrough.Keys[i], tt.wantKeys[i])
-				}
 			}
 		})
 	}

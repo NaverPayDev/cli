@@ -18,21 +18,12 @@
             }
         },
         "passthrough": {
-            "description": "Verbatim issue keys (e.g. Jira/Linear `PROJ-123`) copied unchanged into the commit message, as opposed to `rules`, which translate a prefix into a repo reference.",
-            "oneOf": [
-                {
-                    "const": "uppercase",
-                    "description": "Recognize any uppercase key shape ([A-Z][A-Z0-9]+ followed by 1-7 digits). Also tags non-tracker tokens such as UTF-8."
-                },
-                {
-                    "type": "array",
-                    "description": "Project keys recognized verbatim (e.g. \"PROJ\").",
-                    "items": {
-                        "type": "string",
-                        "pattern": "^[A-Z][A-Z0-9]+$"
-                    }
-                }
-            ]
+            "type": ["array", "null"],
+            "description": "Jira/Linear project keys recognized verbatim in the branch (e.g. \"PROJ\" tags feature/PROJ-123 as [PROJ-123]), as opposed to `rules`, which translate a prefix into a repo reference. Recognition matches Jigit: <KEY>-<1-7 digit number> found anywhere in the branch. Only listed projects are tagged.",
+            "items": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9]+$"
+            }
         },
         "protect": {
             "type": "array",

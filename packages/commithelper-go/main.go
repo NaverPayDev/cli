@@ -13,42 +13,9 @@ import (
 	"text/template"
 )
 
-// Passthrough declares which verbatim issue keys (e.g. "PROJ" in
-// "PROJ-1871") the helper copies straight into the commit message —
-// unchanged — as opposed to `rules`, which translate a prefix into a repo
-// reference. In JSON it is either the string "uppercase" (recognize any
-// uppercase key shape) or an array of project keys (recognize only those).
-// Absent/null = off.
-type Passthrough struct {
-	All  bool
-	Keys []string
-}
-
-func (p *Passthrough) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
-		return nil
-	}
-
-	var s string
-	if err := json.Unmarshal(data, &s); err == nil {
-		if s != "uppercase" {
-			return fmt.Errorf("passthrough: string value must be %q, got %q", "uppercase", s)
-		}
-		p.All = true
-		return nil
-	}
-
-	var arr []string
-	if err := json.Unmarshal(data, &arr); err != nil {
-		return fmt.Errorf("passthrough: must be %q or an array of key strings", "uppercase")
-	}
-	p.Keys = arr
-	return nil
-}
-
 type Config struct {
 	Rules       map[string]*string `json:"rules"`
-	Passthrough Passthrough        `json:"passthrough"`
+	Passthrough []string           `json:"passthrough"`
 	Protect     []string           `json:"protect"`
 	Template    *string            `json:"template,omitempty"`
 }
@@ -64,10 +31,7 @@ var (
 	// GitHub-style branch: <prefix>/<number>. The prefix is translated to a
 	// repo via Config.Rules; the number becomes the issue reference.
 	prefixPattern = regexp.MustCompile(`^([\w-]+)/(\d+)`)
-	// Verbatim issue-key shape (uppercase project + number), used for the
-	// "uppercase" mode and for validating declared keys.
-	anyKeyPattern   = regexp.MustCompile(`\b([A-Z][A-Z0-9]+)-(\d{1,7})\b`)
-	keyShapePattern = regexp.MustCompile(`^[A-Z][A-Z0-9]+$`)
+	keyPattern    = regexp.MustCompile(`([A-Z][A-Z0-9]+)-([0-9]+)`)
 )
 
 func main() {
@@ -140,7 +104,7 @@ func resolve(branch string, config Config) *TemplateData {
 	if td := resolvePrefix(branch, config); td != nil {
 		return td
 	}
-	return resolveVerbatim(branch, config.Passthrough)
+	return resolveKey(branch, config.Passthrough)
 }
 
 // resolvePrefix translates a "<prefix>/<number>" branch into a reference using
@@ -172,53 +136,20 @@ func resolvePrefix(branch string, config Config) *TemplateData {
 	}
 }
 
-// resolveVerbatim finds an uppercase issue key in the branch and copies it
-// as-is. Only keys allowed by Passthrough are recognized.
-func resolveVerbatim(branch string, pt Passthrough) *TemplateData {
-	var pattern *regexp.Regexp
-	if pt.All {
-		pattern = anyKeyPattern
-	} else {
-		valid := validKeys(pt.Keys)
-		if len(valid) == 0 {
-			return nil
-		}
-		pattern = buildKeyPattern(valid)
+func resolveKey(branch string, passthrough []string) *TemplateData {
+	if len(passthrough) == 0 {
+		return nil
 	}
-
-	// Strict: mirror Jigit's (?!-\d). A key immediately followed by "-<digit>"
-	// (e.g. a date suffix) is not recognized; skip it and try the next match so
-	// a valid key later in the branch is still found.
-	for _, loc := range pattern.FindAllStringSubmatchIndex(branch, -1) {
-		end := loc[1]
-		if end+1 < len(branch) && branch[end] == '-' && isDigit(branch[end+1]) {
-			continue
+	allowed := make(map[string]bool, len(passthrough))
+	for _, k := range passthrough {
+		allowed[k] = true
+	}
+	for _, m := range keyPattern.FindAllStringSubmatch(branch, -1) {
+		if len(m[2]) <= 7 && allowed[m[1]] {
+			return &TemplateData{Prefix: m[0]}
 		}
-		return &TemplateData{Prefix: branch[loc[0]:loc[1]]}
 	}
 	return nil
-}
-
-// validKeys keeps only entries shaped like an uppercase project key. Invalid
-// entries would never link, so they are warned about and skipped.
-func validKeys(keys []string) []string {
-	valid := make([]string, 0, len(keys))
-	for _, k := range keys {
-		if keyShapePattern.MatchString(k) {
-			valid = append(valid, k)
-		} else {
-			fmt.Fprintf(os.Stderr, "commithelper: ignoring invalid passthrough entry %q (must match [A-Z][A-Z0-9]+)\n", k)
-		}
-	}
-	return valid
-}
-
-func buildKeyPattern(keys []string) *regexp.Regexp {
-	quoted := make([]string, len(keys))
-	for i, k := range keys {
-		quoted[i] = regexp.QuoteMeta(k)
-	}
-	return regexp.MustCompile(`\b(` + strings.Join(quoted, "|") + `)-(\d{1,7})\b`)
 }
 
 // alreadyHasRef reports whether the resolved reference is already present in
@@ -236,8 +167,8 @@ func alreadyHasRef(message, ref string) bool {
 		}
 		start := from + j
 		end := start + len(ref)
-		beforeOK := start == 0 || !isWordByte(message[start-1])
-		afterOK := end >= len(message) || !isDigit(message[end])
+		beforeOK := start == 0 || !isKeyByte(message[start-1])
+		afterOK := end >= len(message) || !isKeyByte(message[end])
 		if beforeOK && afterOK {
 			return true
 		}
@@ -327,11 +258,11 @@ func isProtectedBranch(branchName string, protectedBranches []string) (bool, err
 	return false, nil
 }
 
-func isDigit(b byte) bool { return b >= '0' && b <= '9' }
-
 func isWordByte(b byte) bool {
 	return b == '_' ||
 		(b >= '0' && b <= '9') ||
 		(b >= 'a' && b <= 'z') ||
 		(b >= 'A' && b <= 'Z')
 }
+
+func isKeyByte(b byte) bool { return b == '-' || isWordByte(b) }
