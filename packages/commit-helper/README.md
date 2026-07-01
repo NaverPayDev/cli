@@ -46,6 +46,7 @@ Extracts issue numbers from branch names and adds them to commit messages:
 - `feature/123` → `[#123] your message`
 - `qa/456` → `[your-org/your-repo#456] your message`
 - `hotfix/789-urgent` → `[#789] your message`
+- `feature/PROJ-1871` → `[PROJ-1871] your message` (Jira/Linear keys via `passthrough`)
 
 ### 🛡️ Branch Protection
 
@@ -90,6 +91,27 @@ Mapping of branch prefixes to repository names.
 - Key: Branch prefix (e.g., `"feature"`)
 - Value: Repository name or `null` for current repo
 
+#### `passthrough` (array)
+
+Project keys for trackers whose issue key already contains the project (Jira/Linear-style `PROJ-1871`). Listed keys are copied **verbatim** into the commit message — unlike `rules`, which translate a branch prefix into a repo reference.
+
+```json
+{ "passthrough": ["PROJ", "OPS"] }
+```
+
+A branch like `feature/PROJ-1871` is tagged `[PROJ-1871]`. Only listed projects are recognized, so unrelated `UPPERCASE-NUMBER` tokens (e.g. `UTF-8`) are never mistaken for issues.
+
+Key recognition matches [Jigit](https://marketplace.atlassian.com/apps/1217129) (the Jira↔Git integration): a key is `<PROJECT>-<NUMBER>` found anywhere in the branch, where `PROJECT` is an uppercase letter followed by uppercase letters/digits (≥2 chars) and `NUMBER` is 1–7 digits.
+
+| Branch (with `["PROJ"]`)      | Result                        |
+| ----------------------------- | ----------------------------- |
+| `feature/PROJ-1871`           | `[PROJ-1871]`                 |
+| `feature/PROJ-1871-add-login` | `[PROJ-1871]`                 |
+| `feature/OPS-42`              | not tagged (`OPS` not listed) |
+| `feature/PROJ-12345678`       | not tagged (8+ digits)        |
+
+`rules` take precedence over `passthrough` when a branch matches both. Note that `feature` and `repo` are built-in prefix rules (active even without a `rules` entry), so a `<prefix>/<number>` branch like `feature/311` is tagged `[#311]` by the prefix path rather than as a passthrough key. Verbatim keys such as `feature/PROJ-311` are unaffected — a letter, not a digit, follows the slash.
+
 #### `extends` (string)
 
 URL to inherit configuration from:
@@ -105,9 +127,19 @@ URL to inherit configuration from:
 ### Basic Feature Branch
 
 ```bash
-git checkout -b feature/NP-1234-payment-integration
+git checkout -b feature/1234-payment-integration
 git commit -m "Implement payment gateway"
 # Result: [#1234] Implement payment gateway
+```
+
+### Jira/Linear Issue Key (passthrough)
+
+With `{ "passthrough": ["PROJ"] }`:
+
+```bash
+git checkout -b feature/PROJ-1871-payment-integration
+git commit -m "Implement payment gateway"
+# Result: [PROJ-1871] Implement payment gateway
 ```
 
 ### External Repository Reference
@@ -183,7 +215,7 @@ npx @naverpay/commit-helper <commit-msg-file>
 ## FAQ
 
 **Q: Does it work with existing issue tags?**  
-A: Yes, if your commit message already contains a tag like `[#123]`, commit-helper will skip it.
+A: If the message already contains **your current branch's** reference (e.g. `[#123]` on `feature/123`), it is left unchanged — safe on re-run and `git commit --amend`. A tag for a _different_ issue (e.g. a hand-written `[#999]`) does not stop your branch's reference from being added.
 
 **Q: Can I use multiple issue numbers?**  
 A: The branch name supports one issue number, but you can manually add more in your commit message.

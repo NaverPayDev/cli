@@ -46,6 +46,7 @@ git commit -m "새로운 기능 추가"
 - `feature/123` → `[#123] 메시지`
 - `qa/456` → `[your-org/your-repo#456] 메시지`
 - `hotfix/789-urgent` → `[#789] 메시지`
+- `feature/PROJ-1871` → `[PROJ-1871] 메시지` (passthrough 로 Jira/Linear 키 지원)
 
 ### 🛡️ 브랜치 보호
 
@@ -90,6 +91,27 @@ git commit -m "새로운 기능 추가"
 - 키: 브랜치 접두사 (예: `"feature"`)
 - 값: 저장소 이름 또는 현재 저장소인 경우 `null`
 
+#### `passthrough` (배열)
+
+이슈 키에 이미 프로젝트가 포함된 트래커(Jira/Linear 스타일 `PROJ-1871`)를 위한 프로젝트 키 목록. `rules` 가 브랜치 접두사를 저장소 참조로 변환하는 것과 달리, 등록된 키는 커밋 메시지에 **그대로** 복사됩니다.
+
+```json
+{ "passthrough": ["PROJ", "OPS"] }
+```
+
+`feature/PROJ-1871` 브랜치는 `[PROJ-1871]` 로 태깅됩니다. 등록된 프로젝트만 인식하므로 `UTF-8` 같은 무관한 `대문자-숫자` 토큰이 이슈로 오인되지 않습니다.
+
+키 인식은 [Jigit](https://marketplace.atlassian.com/apps/1217129)(Jira↔Git 연동)과 동일합니다. 키는 브랜치 어디에나 올 수 있는 `<PROJECT>-<NUMBER>` 형태이며, `PROJECT` 는 대문자로 시작해 대문자/숫자가 이어지고(2자 이상), `NUMBER` 는 1~7자리 숫자입니다.
+
+| 브랜치 (`["PROJ"]` 기준)      | 결과                      |
+| ----------------------------- | ------------------------- |
+| `feature/PROJ-1871`           | `[PROJ-1871]`             |
+| `feature/PROJ-1871-add-login` | `[PROJ-1871]`             |
+| `feature/OPS-42`              | 태깅 안 됨 (`OPS` 미등록) |
+| `feature/PROJ-12345678`       | 태깅 안 됨 (8자리 이상)   |
+
+브랜치가 둘 다에 매칭되면 `rules` 가 `passthrough` 보다 우선합니다. `feature` 와 `repo` 는 빌트인 prefix 규칙(`rules` 에 없어도 항상 활성)이라, `feature/311` 같은 `<prefix>/<number>` 브랜치는 passthrough 키가 아니라 prefix 경로로 `[#311]` 태깅됩니다. `feature/PROJ-311` 처럼 슬래시 뒤에 숫자가 아닌 글자가 오는 verbatim 키는 영향받지 않습니다.
+
 #### `extends` (문자열)
 
 설정을 상속받을 URL:
@@ -105,9 +127,19 @@ git commit -m "새로운 기능 추가"
 ### 기본 기능 브랜치
 
 ```bash
-git checkout -b feature/NP-1234-결제-통합
+git checkout -b feature/1234-결제-통합
 git commit -m "결제 게이트웨이 구현"
 # 결과: [#1234] 결제 게이트웨이 구현
+```
+
+### Jira/Linear 이슈 키 (passthrough)
+
+`{ "passthrough": ["PROJ"] }` 설정 시:
+
+```bash
+git checkout -b feature/PROJ-1871-결제-통합
+git commit -m "결제 게이트웨이 구현"
+# 결과: [PROJ-1871] 결제 게이트웨이 구현
 ```
 
 ### 외부 저장소 참조
@@ -183,7 +215,7 @@ npx @naverpay/commit-helper <commit-msg-file>
 ## 자주 묻는 질문
 
 **Q: 이미 이슈 태그가 있는 경우에도 작동하나요?**  
-A: 네, 커밋 메시지에 이미 `[#123]` 같은 태그가 있으면 commit-helper는 건너뜁니다.
+A: 메시지에 **현재 브랜치의** 참조(예: `feature/123` 의 `[#123]`)가 이미 있으면 그대로 둡니다 — 재실행/`git commit --amend` 에 안전합니다. 단, _다른_ 이슈 태그(예: 수동으로 넣은 `[#999]`)는 브랜치 참조 추가를 막지 않습니다.
 
 **Q: 여러 이슈 번호를 사용할 수 있나요?**  
 A: 브랜치 이름에서는 하나의 이슈 번호만 지원하지만, 커밋 메시지에 수동으로 추가할 수 있습니다.
