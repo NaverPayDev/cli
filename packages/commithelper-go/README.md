@@ -65,10 +65,27 @@ feature/1
 
 Your issue number is automatically tagged based on your setting (`.commithelperrc.json`)
 
+Tracker keys that already carry the project (Jira/Linear-style `PROJ-1871`) are supported too — see [passthrough](#passthrough).
+
 ### Blocking commit
 
 - Blocks direct commit toward `main`, `develop` `master` branch by throwing error on commit attempt.
 - To block specific branches, add at `protect` field on `commithelperrc`.
+
+### Re-tagging (idempotency)
+
+commithelper adds your current branch's reference **unless that exact reference is already in the message**, so re-running the hook or `git commit --amend` never duplicates the tag.
+
+| Message already contains…                                 | Result                                                |
+| --------------------------------------------------------- | ----------------------------------------------------- |
+| the branch's reference (e.g. `[#123]`, or `#123` in body) | left unchanged                                        |
+| only a _different_ issue's tag (e.g. `[#999]`)            | branch's reference is still added → `[#123] [#999] …` |
+| no reference                                              | branch's reference is added                           |
+
+Two consequences follow:
+
+- commithelper only recognizes **its own resolved reference**, not other issue tags — a hand-written tag for a different issue does not stop it from adding the branch's reference.
+- If the message body already mentions the branch's reference (e.g. `fixes #123` on `feature/123`), it is treated as already tagged and left as-is.
 
 ## Configuration
 
@@ -86,11 +103,51 @@ This is Basic rule of `.commithelperrc.json`.
 }
 ```
 
+#### $schema (optional — editor autocompletion)
+
+Add a `$schema` reference so your editor offers autocompletion, inline docs, and validation while editing `.commithelperrc.json`. The schema ships inside the installed package, so a relative path works offline (no CDN, Nexus-friendly):
+
+```json
+{
+    "$schema": "./node_modules/@naverpay/commithelper-go/schema.json",
+    "rules": { "feature": null }
+}
+```
+
+> Prefer the relative path above (resolved from the installed package) over a public CDN URL — consistent with this package shipping everything locally.
+
 #### rules
 
 - Key of rules field means branch prefix. By `feature` key, this rule is applied to branches named using the `feature/***` pattern.
 - Value represents the repository to be tagged. For example, rule with value 'your-org/your-repo' tags 'your-org/your-repo#1'.
 - A rule with a `null` value tags repository itself.
+
+#### passthrough
+
+For trackers whose issue key already contains the project (e.g. Jira/Linear `PROJ-1871`), the branch carries the full key — there is nothing to look up. `passthrough` lists the project keys to copy **verbatim** into the commit message, as opposed to `rules`, which translate a prefix into a repo reference.
+
+```json
+{ "passthrough": ["PROJ", "OPS"] }
+```
+
+A branch like `feature/PROJ-1871` is tagged `[PROJ-1871]`. Only listed projects are recognized (`OPS-9` is tagged only if `OPS` is listed), so unrelated `UPPERCASE-NUMBER` tokens such as `UTF-8` are never mistaken for issues. Omit the field to disable verbatim tagging (`rules` still apply).
+
+**How a key is recognized.** Recognition matches [Jigit](https://marketplace.atlassian.com/apps/1217129) (the Jira↔Git integration), so a listed project links the same way in commithelper and Jigit. A key is `<PROJECT>-<NUMBER>` found anywhere in the branch:
+
+- `PROJECT` — an uppercase letter followed by uppercase letters/digits (**≥2 chars**: `PROJ`, `OPS`, `AB`, `ABC2`).
+- `NUMBER` — 1–7 digits (an 8+ digit run is not a key).
+
+| Branch (with `["PROJ"]`)      | Result        | Why                                        |
+| ----------------------------- | ------------- | ------------------------------------------ |
+| `feature/PROJ-1871`           | `[PROJ-1871]` | standard key                               |
+| `feature/PROJ-1871-add-login` | `[PROJ-1871]` | trailing text after the number is ignored  |
+| `feature/PROJ-1871-20260101`  | `[PROJ-1871]` | a `-<number>` (date) suffix is ignored too |
+| `feature_PROJ-1871`           | `[PROJ-1871]` | the key may appear anywhere in the branch  |
+| `feature/OPS-42`              | not tagged    | `OPS` is not listed                        |
+| `feature/PROJ-12345678`       | not tagged    | the number has more than 7 digits          |
+| `PROJECT/123`                 | not tagged    | keys use `-`, not `/` (that's a `rules` prefix) |
+
+`rules` (GitHub prefixes) take precedence over `passthrough` when a branch matches both.
 
 #### protect
 
@@ -114,7 +171,9 @@ This is Basic rule of `.commithelperrc.json`.
   - `{{.Message}}`: Original commit message
   - `{{.Number}}`: Issue number extracted from branch name
   - `{{.Repo}}`: Repository name (empty string if not specified in rules)
-  - `{{.Prefix}}`: Full prefix (`#123` or `org/repo#123`)
+  - `{{.Prefix}}`: Full reference (`#123`, `org/repo#123`, or a verbatim key like `PROJ-1871`)
+- For `passthrough` (verbatim) branches, `{{.Prefix}}` is the full key (e.g. `PROJ-123`) and `{{.Number}}` its number (`123`), while `{{.Repo}}` is empty — prefer `{{.Prefix}}` for templates that must work with both styles.
+- Put the reference in your template as `{{.Prefix}}` for safe re-tagging: commithelper skips an already-tagged message by looking for that exact reference, so rendering it another way (e.g. `#{{.Number}}` for a repo-scoped or verbatim rule) can add it twice on `git commit --amend`.
 
 ##### Template Examples
 
@@ -125,7 +184,7 @@ This is Basic rule of `.commithelperrc.json`.
     "rules": {
         "feature": null
     },
-    "template": "{{.Message}}\n\nRef. [#{{.Number}}]"
+    "template": "{{.Message}}\n\nRef. [{{.Prefix}}]"
 }
 ```
 
@@ -202,8 +261,8 @@ The appropriate platform-specific binary package is automatically installed via 
 
 ## Q&A
 
-- What happens if commit has already tagged issue like `[your-org/your-repo#1]`?
-  - `commithelper-go` do not works. Already tagged issue remains unchanged
+- What happens if the commit is already tagged?
+  - If it already contains the reference for your current branch, it is left unchanged (safe on re-run / `git commit --amend`). A tag for a _different_ issue does **not** prevent your branch's reference from being added — see [Re-tagging](#re-tagging-idempotency).
 - How does commithelper-go behaves on `feature/1_xxx` `feature/1-xxx` patterned branch name?
   - It works same as `feature/1` branch.
 - What's the difference between `@naverpay/commit-helper` and `@naverpay/commithelper-go`?

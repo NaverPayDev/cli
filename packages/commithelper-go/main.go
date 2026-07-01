@@ -14,9 +14,10 @@ import (
 )
 
 type Config struct {
-	Rules    map[string]*string `json:"rules"`
-	Protect  []string           `json:"protect"`
-	Template *string            `json:"template,omitempty"`
+	Rules       map[string]*string `json:"rules"`
+	Passthrough []string           `json:"passthrough"`
+	Protect     []string           `json:"protect"`
+	Template    *string            `json:"template,omitempty"`
 }
 
 type TemplateData struct {
@@ -26,6 +27,13 @@ type TemplateData struct {
 	Prefix  string
 }
 
+var (
+	// GitHub-style branch: <prefix>/<number>. The prefix is translated to a
+	// repo via Config.Rules; the number becomes the issue reference.
+	prefixPattern = regexp.MustCompile(`^([\w-]+)/(\d+)`)
+	keyPattern    = regexp.MustCompile(`([A-Z][A-Z0-9]+)-([0-9]+)`)
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: commithelper-go <commit-message-file-or-text>")
@@ -33,10 +41,11 @@ func main() {
 	}
 
 	input := os.Args[1]
+	isFile := false
 	var commitMessage string
 
 	if _, err := os.Stat(input); err == nil {
-		// Input is a file path
+		isFile = true
 		commitMessageBytes, err := ioutil.ReadFile(input)
 		if err != nil {
 			fmt.Printf("Error reading commit message file: %v\n", err)
@@ -44,57 +53,128 @@ func main() {
 		}
 		commitMessage = string(commitMessageBytes)
 	} else {
-		// Input is a direct commit message
 		commitMessage = input
-	}
-
-	// Check if commit message is already tagged
-	if isAlreadyTagged(commitMessage) {
-		// Do not modify if already tagged
-		if _, err := os.Stat(input); err == nil {
-			// Write back unchanged if input was a file
-			err = ioutil.WriteFile(input, []byte(commitMessage), 0644)
-			if err != nil {
-				fmt.Printf("Error writing to commit message file: %v\n", err)
-				os.Exit(1)
-			}
-		} else {
-			// Print unchanged if input was a direct message
-			fmt.Println(commitMessage)
-		}
-		return
 	}
 
 	branchName := getCurrentBranchName()
 	config := loadConfig()
 
-	// Check if current branch is protected
-	protected, err := isProtectedBranch(branchName, config.Protect)
+	result, err := processMessage(commitMessage, branchName, config)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
-	if protected {
-		fmt.Printf("Error: Cannot commit to protected branch '%s'\n", branchName)
-		os.Exit(1)
-	}
 
-	templateData := generateTemplateData(branchName, config, commitMessage)
-	if templateData != nil {
-		commitMessage = applyTemplate(config, templateData)
-	}
-
-	if _, err := os.Stat(input); err == nil {
-		// Write back to the file if input was a file
-		err = ioutil.WriteFile(input, []byte(commitMessage), 0644)
-		if err != nil {
+	if isFile {
+		if err := ioutil.WriteFile(input, []byte(result), 0644); err != nil {
 			fmt.Printf("Error writing to commit message file: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
-		// Print the result if input was a direct message
-		fmt.Println(commitMessage)
+		fmt.Println(result)
 	}
+}
+
+// processMessage is the pure core: it gates protected branches, resolves the
+// issue reference from the branch, and tags the message idempotently.
+func processMessage(message, branch string, config Config) (string, error) {
+	protected, err := isProtectedBranch(branch, config.Protect)
+	if err != nil {
+		return "", err
+	}
+	if protected {
+		return "", fmt.Errorf("cannot commit to protected branch %q", branch)
+	}
+
+	td := resolve(branch, config)
+	if td == nil {
+		return message, nil
+	}
+	if alreadyHasRef(message, td.Prefix) {
+		return message, nil
+	}
+
+	td.Message = message
+	return applyTemplate(config, td), nil
+}
+
+// resolve maps a branch to an issue reference, trying the GitHub-style prefix
+// rules first, then verbatim passthrough keys.
+func resolve(branch string, config Config) *TemplateData {
+	if td := resolvePrefix(branch, config); td != nil {
+		return td
+	}
+	return resolveKey(branch, config.Passthrough)
+}
+
+// resolvePrefix translates a "<prefix>/<number>" branch into a reference using
+// Config.Rules (nil value → "#N", repo value → "repo#N").
+func resolvePrefix(branch string, config Config) *TemplateData {
+	matches := prefixPattern.FindStringSubmatch(branch)
+	if len(matches) < 3 {
+		return nil
+	}
+
+	prefixKey := matches[1]
+	issueNumber := matches[2]
+
+	repo, exists := config.Rules[prefixKey]
+	if !exists {
+		return nil
+	}
+
+	if repo == nil {
+		return &TemplateData{
+			Number: issueNumber,
+			Prefix: fmt.Sprintf("#%s", issueNumber),
+		}
+	}
+	return &TemplateData{
+		Number: issueNumber,
+		Repo:   *repo,
+		Prefix: fmt.Sprintf("%s#%s", *repo, issueNumber),
+	}
+}
+
+func resolveKey(branch string, passthrough []string) *TemplateData {
+	if len(passthrough) == 0 {
+		return nil
+	}
+	allowed := make(map[string]bool, len(passthrough))
+	for _, k := range passthrough {
+		allowed[k] = true
+	}
+	for _, m := range keyPattern.FindAllStringSubmatch(branch, -1) {
+		if len(m[2]) <= 7 && allowed[m[1]] {
+			return &TemplateData{Prefix: m[0], Number: m[2]}
+		}
+	}
+	return nil
+}
+
+// alreadyHasRef reports whether the resolved reference is already present in
+// the message, so re-runs (e.g. git commit --amend) do not tag twice. The
+// reference must appear as a whole token, not as part of a longer number
+// (so "#123" does not match "#1234").
+func alreadyHasRef(message, ref string) bool {
+	if ref == "" {
+		return false
+	}
+	for from := 0; from <= len(message); {
+		j := strings.Index(message[from:], ref)
+		if j < 0 {
+			return false
+		}
+		start := from + j
+		end := start + len(ref)
+		beforeOK := start == 0 || !isKeyByte(message[start-1])
+		afterOK := end >= len(message) || !isKeyByte(message[end])
+		if beforeOK && afterOK {
+			return true
+		}
+		from = start + 1
+	}
+	return false
 }
 
 func getCurrentBranchName() string {
@@ -141,61 +221,6 @@ func loadConfig() Config {
 	return config
 }
 
-func generatePrefix(branchName string, config Config) string {
-	pattern := regexp.MustCompile(`^([\w-]+)/(\d+).*`)
-	matches := pattern.FindStringSubmatch(branchName)
-	if len(matches) < 3 {
-		return ""
-	}
-
-	prefixKey := matches[1]
-	issueNumber := matches[2]
-
-	repo, exists := config.Rules[prefixKey]
-	if !exists {
-		return ""
-	}
-
-	if repo == nil {
-		return fmt.Sprintf("#%s", issueNumber)
-	}
-
-	return fmt.Sprintf("%s#%s", *repo, issueNumber)
-}
-
-func generateTemplateData(branchName string, config Config, message string) *TemplateData {
-	pattern := regexp.MustCompile(`^([\w-]+)/(\d+).*`)
-	matches := pattern.FindStringSubmatch(branchName)
-	if len(matches) < 3 {
-		return nil
-	}
-
-	prefixKey := matches[1]
-	issueNumber := matches[2]
-
-	repo, exists := config.Rules[prefixKey]
-	if !exists {
-		return nil
-	}
-
-	var repoName string
-	var prefix string
-	if repo == nil {
-		repoName = ""
-		prefix = fmt.Sprintf("#%s", issueNumber)
-	} else {
-		repoName = *repo
-		prefix = fmt.Sprintf("%s#%s", *repo, issueNumber)
-	}
-
-	return &TemplateData{
-		Message: message,
-		Number:  issueNumber,
-		Repo:    repoName,
-		Prefix:  prefix,
-	}
-}
-
 func applyTemplate(config Config, data *TemplateData) string {
 	// If no template is configured, use default format
 	if config.Template == nil || *config.Template == "" {
@@ -233,12 +258,11 @@ func isProtectedBranch(branchName string, protectedBranches []string) (bool, err
 	return false, nil
 }
 
-func isAlreadyTagged(commitMessage string) bool {
-	// Check if commit message already contains issue tag like [#123] or [org/repo#123]
-	// This pattern matches:
-	// - [#123] (simple issue number)
-	// - [Some-Org/Some_Repo#123] (complex repo with special chars)
-	pattern := regexp.MustCompile(`^\[.*?#\d+\]`)
-	trimmedMessage := strings.TrimSpace(commitMessage)
-	return pattern.MatchString(trimmedMessage)
+func isWordByte(b byte) bool {
+	return b == '_' ||
+		(b >= '0' && b <= '9') ||
+		(b >= 'a' && b <= 'z') ||
+		(b >= 'A' && b <= 'Z')
 }
+
+func isKeyByte(b byte) bool { return b == '-' || isWordByte(b) }

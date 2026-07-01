@@ -1,0 +1,40 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/NaverPayDev/cli/tree/main/packages/commithelper-go/schema.json",
+    "title": "Schema for .commithelperrc.json",
+    "description": "Configuration for @naverpay/commithelper-go.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "$schema": {
+            "type": "string",
+            "description": "Path or URL to this schema (enables editor autocompletion)."
+        },
+        "rules": {
+            "type": "object",
+            "description": "GitHub-style branch prefixes. The key is a branch prefix, matched as `<prefix>/<number>`; the value is the repo to tag (`repo#number`), or null to tag the current repo (`#number`).",
+            "additionalProperties": {
+                "type": ["string", "null"]
+            }
+        },
+        "passthrough": {
+            "type": ["array", "null"],
+            "description": "Jira/Linear project keys recognized verbatim in the branch (e.g. \"PROJ\" tags feature/PROJ-123 as [PROJ-123]), as opposed to `rules`, which translate a prefix into a repo reference. Recognition matches Jigit: <KEY>-<1-7 digit number> found anywhere in the branch. Only listed projects are tagged.",
+            "items": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9]+$"
+            }
+        },
+        "protect": {
+            "type": "array",
+            "description": "Branches blocked from committing. Glob patterns: `*` and `?` do not match across `/`; `[...]` matches a character set.",
+            "items": {
+                "type": "string"
+            }
+        },
+        "template": {
+            "type": "string",
+            "description": "Go text/template for the final commit message. Default: `[{{.Prefix}}] {{.Message}}`. Variables: {{.Message}} {{.Number}} {{.Repo}} {{.Prefix}}."
+        }
+    }
+}
