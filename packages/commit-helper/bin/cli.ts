@@ -10,8 +10,8 @@ import {
     ISSUE_TAGGING_MAP,
     BRANCH_ISSUE_TAGGING_REGEX,
     PURE_BRANCH_ISSUE_TAGGING_REGEX,
+    KEY_PATTERN,
     DEFAULT_PROTECTED_BRANCHES,
-    ISSUE_TAGGING_REGEX,
 } from '../src/constant.js'
 
 async function getCurrentBranchName(): Promise<string> {
@@ -30,71 +30,120 @@ async function getCurrentBranchName(): Promise<string> {
     })
 }
 
+function resolvePrefix(branchName: string, issueMap: Record<string, string | null>): string | null {
+    const foundedIssueTagging = branchName.match(BRANCH_ISSUE_TAGGING_REGEX)
+
+    if (!foundedIssueTagging || foundedIssueTagging.length === 0) {
+        return null
+    }
+
+    // 브랜치명에는 _fix 와 같은 추가정보가 있을 수 있으므로, 서비스 명을 추가로 뽑아낸다.
+    const foundBranch = foundedIssueTagging[0].match(PURE_BRANCH_ISSUE_TAGGING_REGEX)
+
+    if (!foundBranch) {
+        // rebase 등으로 브랜치 없이 작업할 수 있음
+        return null
+    }
+
+    const branchInfo = foundBranch[0]
+    const serviceName = branchInfo.split('/')[0].toLowerCase()
+    const issueNumber = branchInfo.split('/')[1]
+
+    const repoName = issueMap[serviceName]
+
+    // 사용자 설정에 있거나 내부상수에 정의된 경우
+    if (repoName) {
+        return `${repoName}#${issueNumber}`
+    }
+    // null 로 명시되었다는 것은 자기자신 (#123) 으로 태깅하겠다는 뜻
+    if (repoName === null) {
+        return `#${issueNumber}`
+    }
+    // undefined 는 못찾았다는 뜻
+    return null
+}
+
+// passthrough 에 등록된 프로젝트 키만 인식한다 (Jigit 규칙: <KEY>-<1~7자리 숫자>).
+export function resolveKey(branchName: string, passthrough?: string[]): string | null {
+    if (!passthrough || passthrough.length === 0) {
+        return null
+    }
+
+    const allowed = new Set(passthrough)
+
+    for (const match of branchName.matchAll(KEY_PATTERN)) {
+        const [full, project, issueNumber] = match
+        if (issueNumber.length <= 7 && allowed.has(project)) {
+            return full
+        }
+    }
+
+    return null
+}
+
+function isKeyByte(char: string): boolean {
+    return /[-\w]/.test(char)
+}
+
+// 재실행·amend 때 같은 태그가 중복으로 붙지 않도록, 이 참조가 메시지에 그대로 있는지 확인한다 ("#123" 은 "#1234" 에 매칭되지 않음).
+export function alreadyHasRef(message: string, ref: string): boolean {
+    if (ref === '') {
+        return false
+    }
+
+    let from = 0
+    while (from <= message.length) {
+        const index = message.indexOf(ref, from)
+        if (index < 0) {
+            return false
+        }
+
+        const start = index
+        const end = index + ref.length
+        const beforeOK = start === 0 || !isKeyByte(message[start - 1])
+        const afterOK = end >= message.length || !isKeyByte(message[end])
+
+        if (beforeOK && afterOK) {
+            return true
+        }
+
+        from = start + 1
+    }
+
+    return false
+}
+
 export function getCommitMessageByBranchName(
     branchName: string,
     originCommitMessage: string,
     externalConfig?: Record<string, string | null>,
+    passthrough?: string[],
 ) {
-    let finalCommitMessage = ''
+    /**
+     * @description 내부 상수를 후순위. 사용자 설정이 덮어쓴다.
+     */
+    const issueMap = {
+        ...ISSUE_TAGGING_MAP,
+        ...externalConfig,
+    } as Record<string, string | null>
 
-    // 커밋 메시지 내부에 이슈 태깅이 되어 있을 경우, 브랜치명을 확인하지 않고 그냥 보낸다.
-    if (ISSUE_TAGGING_REGEX.test(originCommitMessage)) {
-        finalCommitMessage = originCommitMessage
+    const ref = resolvePrefix(branchName, issueMap) ?? resolveKey(branchName, passthrough)
+
+    if (!ref) {
+        return originCommitMessage
     }
-    // 현재 브랜치명에서 이슈 태깅을 찾아서 커밋 메시지에 추가한다.
-    else {
-        const foundedIssueTagging = branchName.match(BRANCH_ISSUE_TAGGING_REGEX)
 
-        // 브랜치 명이 정규식과 일치한다면
-        if (foundedIssueTagging && foundedIssueTagging.length > 0) {
-            // 브랜치명에는 _fx 와 같은 추가정보가 있을 수 있으므로, 서비스 명을 추가로 뽑아낸다.
-            const foundBranch = foundedIssueTagging[0].match(PURE_BRANCH_ISSUE_TAGGING_REGEX)
-
-            if (!foundBranch) {
-                // rebase 등으로 브랜치 없이 작업할 수 있음
-                return originCommitMessage
-            }
-
-            const branchInfo = foundBranch[0]
-
-            const serviceName = branchInfo.split('/')[0].toLowerCase()
-            const issueNumber = branchInfo.split('/')[1]
-
-            /**
-             * @description 내부 상수를 후순위. 사용자 설정이 덮어쓴다.
-             */
-            const issueMap = {
-                ...ISSUE_TAGGING_MAP,
-                ...externalConfig,
-            } as Record<string, string | null>
-
-            // 태깅 맵 객체에 맞는게 있는지 확인한다.
-            const repoName = issueMap[serviceName]
-
-            // 사용자 설정에 있거나 내부상수에 정의된 경우
-            if (repoName) {
-                finalCommitMessage = `[${repoName}#${issueNumber}] ${originCommitMessage}`
-            }
-            // null 로 명시되었다는 것은 자기자신 (#123) 으로 태깅하겠다는 뜻
-            else if (repoName === null) {
-                finalCommitMessage = `[#${issueNumber}] ${originCommitMessage}`
-            }
-            // undefined 는 못찾았다는 뜻. 커밋메시지를 그냥 돌려보낸다.
-            else {
-                finalCommitMessage = originCommitMessage
-            }
-        }
-        // 맞는게 없다면 그냥 기존 메시지로 보낸다
-        else {
-            finalCommitMessage = originCommitMessage
-        }
+    if (alreadyHasRef(originCommitMessage, ref)) {
+        return originCommitMessage
     }
-    return finalCommitMessage
+
+    return `[${ref}] ${originCommitMessage}`
 }
 
 interface Config {
     rules: Record<string, string | null>
     protect?: string[]
+    passthrough?: string[]
 }
 
 export async function readExternalConfig(): Promise<Config> {
@@ -109,6 +158,7 @@ export async function readExternalConfig(): Promise<Config> {
 
     const mergedRules: Record<string, string | null> = {...(localConfig.rules || {})}
     let mergedProtect: string[] = Array.isArray(localConfig.protect) ? [...localConfig.protect] : []
+    let mergedPassthrough: string[] = Array.isArray(localConfig.passthrough) ? [...localConfig.passthrough] : []
 
     const extendsUrl = localConfig.extends
     if (typeof extendsUrl === 'string' && /^(http|https):\/\//.test(extendsUrl)) {
@@ -127,6 +177,10 @@ export async function readExternalConfig(): Promise<Config> {
             if (Array.isArray(extendsConfig.protect)) {
                 mergedProtect = [...extendsConfig.protect, ...mergedProtect]
             }
+
+            if (Array.isArray(extendsConfig.passthrough)) {
+                mergedPassthrough = [...extendsConfig.passthrough, ...mergedPassthrough]
+            }
         } catch (e) {
             throw new Error(`Failed to load external config from "${extendsUrl}": ${(e as Error).message}`)
         }
@@ -138,6 +192,10 @@ export async function readExternalConfig(): Promise<Config> {
 
     if (mergedProtect.length > 0) {
         result.protect = [...new Set(mergedProtect)]
+    }
+
+    if (mergedPassthrough.length > 0) {
+        result.passthrough = [...new Set(mergedPassthrough)]
     }
 
     return result
@@ -163,9 +221,9 @@ export async function run() {
         flags: {help: {type: 'boolean', shortFlag: 'h'}, show: {type: 'boolean', shortFlag: 's'}},
     })
 
-    const currentBranchName = (await getCurrentBranchName()).toLowerCase()
+    const currentBranchName = await getCurrentBranchName()
 
-    const {rules = {}, protect} = await readExternalConfig()
+    const {rules = {}, protect, passthrough} = await readExternalConfig()
 
     if (cli.flags.show) {
         /**
@@ -189,13 +247,14 @@ export async function run() {
         throw new Error('Commit message is required.')
     }
 
-    const isProtectedBranch = isStringMatchingPatterns(currentBranchName, protect)
+    // protect 매칭은 소문자화한 브랜치로(기존 동작 유지), 태깅은 원본 브랜치로(대문자 키 인식).
+    const isProtectedBranch = isStringMatchingPatterns(currentBranchName.toLowerCase(), protect)
 
     if (isProtectedBranch) {
         throw new Error(`You can't commit on this branch: ${currentBranchName}`)
     }
 
-    const result = getCommitMessageByBranchName(currentBranchName, commitMessage, rules)
+    const result = getCommitMessageByBranchName(currentBranchName, commitMessage, rules, passthrough)
 
     await fs.writeFile(commitFilePath, result, {encoding: 'utf8'})
 }
