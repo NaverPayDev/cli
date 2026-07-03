@@ -1,5 +1,13 @@
 # @naverpay/commit-helper
 
+## 2.0.1
+
+### Patch Changes
+
+-   e937702: feat(commit-helper): support local file path in extends
+
+    PR: [feat(commit-helper): support local file path in extends](https://github.com/NaverPayDev/cli/pull/84)
+
 ## 2.0.0
 
 ### Major Changes

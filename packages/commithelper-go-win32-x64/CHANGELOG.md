@@ -1,5 +1,7 @@
 # @naverpay/commithelper-go-win32-x64
 
+## 1.5.0
+
 ## 1.4.0
 
 ## 1.3.1

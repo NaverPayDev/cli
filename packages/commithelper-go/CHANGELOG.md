@@ -1,5 +1,13 @@
 # @naverpay/commithelper-go
 
+## 1.5.0
+
+### Minor Changes
+
+-   d2714c5: feat(commithelper-go): add extends support for remote config inheritance
+
+    PR: [feat(commithelper-go): add extends support for remote config inheritance](https://github.com/NaverPayDev/cli/pull/83)
+
 ## 1.4.0
 
 ### Minor Changes
