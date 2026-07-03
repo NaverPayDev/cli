@@ -141,6 +141,7 @@ Install the shared config as a dev dependency and reference it via a relative pa
 | `template`    | local wins; falls back to base if local is unset |
 
 **Constraints:**
+
 - Local path: relative paths are resolved from the current working directory (repo root).
 - Remote URL: only `http://` and `https://` are accepted. 10-second timeout.
 - The base config's own `extends` field is **ignored** — no recursive loading.
