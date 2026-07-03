@@ -103,6 +103,34 @@ This is Basic rule of `.commithelperrc.json`.
 }
 ```
 
+#### extends
+
+Inherit a shared base config from a remote URL. The remote config is fetched once at commit time and merged with the local config — useful for teams managing many repositories with a common set of rules.
+
+```json
+{
+    "extends": "https://raw.githubusercontent.com/my-org/.github/main/.commithelperrc.json",
+    "protect": ["main"],
+    "rules": {
+        "repo": null
+    }
+}
+```
+
+**Merge strategy** (local always wins on conflict):
+
+| Field         | How merged |
+| ------------- | ---------- |
+| `rules`       | remote is the base; local key overrides on conflict |
+| `protect`     | union of remote + local (deduped) |
+| `passthrough` | union of remote + local (deduped) |
+| `template`    | local wins; falls back to remote if local is unset |
+
+**Constraints:**
+- Only `http://` and `https://` URLs are accepted.
+- The remote config's own `extends` field is **ignored** — no recursive fetching.
+- Fetch failure is a fatal error (exits with code 1).
+
 #### $schema (optional — editor autocompletion)
 
 Add a `$schema` reference so your editor offers autocompletion, inline docs, and validation while editing `.commithelperrc.json`. The schema ships inside the installed package, so a relative path works offline (no CDN, Nexus-friendly):
