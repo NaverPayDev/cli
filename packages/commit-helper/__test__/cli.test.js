@@ -1,4 +1,8 @@
-import {getCommitMessageByBranchName, isStringMatchingPatterns, resolveKey, alreadyHasRef} from '../bin/cli.js'
+import {writeFile, mkdtemp, rm} from 'fs/promises'
+import {tmpdir} from 'os'
+import {join} from 'path'
+
+import {getCommitMessageByBranchName, isStringMatchingPatterns, resolveKey, alreadyHasRef, loadExtendsConfig} from '../bin/cli.js'
 import {BRANCH_ISSUE_TAGGING_REGEX} from '../src/constant.js'
 
 describe('브랜치가 commithelper 형식에 맞는지 확인하는 정규식', () => {
@@ -160,11 +164,6 @@ describe('getCommitMessageByBranchName: 우선순위와 멱등', () => {
 })
 
 // ── extends: loadExtendsConfig ────────────────────────────────────────────────
-
-import {loadExtendsConfig} from '../bin/cli.js'
-import {writeFile, mkdtemp, rm} from 'fs/promises'
-import {tmpdir} from 'os'
-import {join} from 'path'
 
 describe('loadExtendsConfig — local file path', () => {
     let dir
