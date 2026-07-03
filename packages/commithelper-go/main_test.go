@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -510,6 +512,85 @@ func TestFetchExtendsConfig(t *testing.T) {
 		// Just verify the config was parsed; the nested extends is not followed
 		if _, ok := cfg.Rules["plan"]; !ok {
 			t.Error("expected plan rule from remote")
+		}
+	})
+}
+
+// ── extends: readLocalConfig ──────────────────────────────────────────────────
+
+func TestReadLocalConfig(t *testing.T) {
+	t.Run("valid local file is read and parsed", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, ".commithelperrc.json")
+		content := `{"protect":["main"],"rules":{"plan":"org/plan"},"passthrough":["PROJ"]}`
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatalf("failed to write temp file: %v", err)
+		}
+
+		cfg, err := readLocalConfig(path)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(cfg.Protect) != 1 || cfg.Protect[0] != "main" {
+			t.Errorf("protect: got %v, want [main]", cfg.Protect)
+		}
+		if repo, ok := cfg.Rules["plan"]; !ok || *repo != "org/plan" {
+			t.Errorf("rules[plan]: unexpected %v", cfg.Rules["plan"])
+		}
+		if len(cfg.Passthrough) != 1 || cfg.Passthrough[0] != "PROJ" {
+			t.Errorf("passthrough: got %v, want [PROJ]", cfg.Passthrough)
+		}
+	})
+
+	t.Run("missing file returns error", func(t *testing.T) {
+		_, err := readLocalConfig("/nonexistent/path/.commithelperrc.json")
+		if err == nil {
+			t.Error("expected error for missing file, got nil")
+		}
+	})
+
+	t.Run("invalid JSON returns error", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, ".commithelperrc.json")
+		if err := os.WriteFile(path, []byte("not json"), 0644); err != nil {
+			t.Fatalf("failed to write temp file: %v", err)
+		}
+		_, err := readLocalConfig(path)
+		if err == nil {
+			t.Error("expected error for invalid JSON, got nil")
+		}
+	})
+}
+
+func TestLoadExtendsConfig(t *testing.T) {
+	t.Run("http URL dispatches to fetchExtendsConfig", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, `{"rules":{"plan":"org/plan"}}`)
+		}))
+		defer srv.Close()
+
+		cfg, err := loadExtendsConfig(srv.URL)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if _, ok := cfg.Rules["plan"]; !ok {
+			t.Error("expected plan rule from http extends")
+		}
+	})
+
+	t.Run("local path dispatches to readLocalConfig", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, ".commithelperrc.json")
+		if err := os.WriteFile(path, []byte(`{"rules":{"qa":"org/qa"}}`), 0644); err != nil {
+			t.Fatalf("failed to write temp file: %v", err)
+		}
+
+		cfg, err := loadExtendsConfig(path)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if _, ok := cfg.Rules["qa"]; !ok {
+			t.Error("expected qa rule from local extends")
 		}
 	})
 }

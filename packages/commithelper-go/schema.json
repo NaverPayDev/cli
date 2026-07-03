@@ -12,8 +12,7 @@
         },
         "extends": {
             "type": "string",
-            "pattern": "^https?://",
-            "description": "URL of a remote .commithelperrc.json to use as the base config. Must be an http:// or https:// URL. The remote config is fetched and merged with the local config: local values override remote on conflict. Nested extends in the remote config are not followed."
+            "description": "Base config to inherit from. Accepts an http:// or https:// URL, or a local file path (e.g. ./node_modules/@my-org/commithelperrc/.commithelperrc.json). The base config is merged with the local config: local values override base on conflict. Nested extends in the base config are not followed."
         },
         "rules": {
             "type": "object",

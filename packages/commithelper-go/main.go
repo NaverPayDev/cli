@@ -222,7 +222,7 @@ func loadConfig() Config {
 	}
 
 	if config.Extends != nil && *config.Extends != "" {
-		baseConfig, err := fetchExtendsConfig(*config.Extends)
+		baseConfig, err := loadExtendsConfig(*config.Extends)
 		if err != nil {
 			fmt.Printf("Error loading extends config: %v\n", err)
 			os.Exit(1)
@@ -233,12 +233,17 @@ func loadConfig() Config {
 	return config
 }
 
-// fetchExtendsConfig fetches and parses a remote .commithelperrc.json from url.
-// Only http:// and https:// URLs are accepted.
-func fetchExtendsConfig(url string) (Config, error) {
-	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-		return Config{}, fmt.Errorf("extends must be an http/https URL, got: %s", url)
+// loadExtendsConfig dispatches to fetchExtendsConfig (HTTP/HTTPS) or
+// readLocalConfig (local file path) based on the extends value.
+func loadExtendsConfig(extends string) (Config, error) {
+	if strings.HasPrefix(extends, "http://") || strings.HasPrefix(extends, "https://") {
+		return fetchExtendsConfig(extends)
 	}
+	return readLocalConfig(extends)
+}
+
+// fetchExtendsConfig fetches and parses a remote .commithelperrc.json via HTTP/HTTPS.
+func fetchExtendsConfig(url string) (Config, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -255,6 +260,20 @@ func fetchExtendsConfig(url string) (Config, error) {
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return Config{}, fmt.Errorf("failed to parse extends config from %q: %w", url, err)
+	}
+	return cfg, nil
+}
+
+// readLocalConfig reads and parses a .commithelperrc.json from a local file path.
+// Relative paths are resolved from the current working directory.
+func readLocalConfig(filePath string) (Config, error) {
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to read extends config from %q: %w", filePath, err)
+	}
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return Config{}, fmt.Errorf("failed to parse extends config from %q: %w", filePath, err)
 	}
 	return cfg, nil
 }

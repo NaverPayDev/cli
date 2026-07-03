@@ -105,14 +105,28 @@ This is Basic rule of `.commithelperrc.json`.
 
 #### extends
 
-Inherit a shared base config from a remote URL. The remote config is fetched once at commit time and merged with the local config — useful for teams managing many repositories with a common set of rules.
+Inherit a shared base config. Accepts an **HTTP/HTTPS URL** or a **local file path** — useful for teams managing many repositories with a common set of rules.
+
+**Local file path (recommended for private registries):**
+
+```json
+{
+    "extends": "./node_modules/@my-org/commithelperrc/.commithelperrc.json",
+    "rules": {
+        "my-feature": "my-org/my-repo"
+    }
+}
+```
+
+Install the shared config as a dev dependency and reference it via a relative path. Works offline, versioned through `package.json`, no auth required.
+
+**Remote URL:**
 
 ```json
 {
     "extends": "https://raw.githubusercontent.com/my-org/.github/main/.commithelperrc.json",
-    "protect": ["main"],
     "rules": {
-        "repo": null
+        "my-feature": "my-org/my-repo"
     }
 }
 ```
@@ -121,15 +135,16 @@ Inherit a shared base config from a remote URL. The remote config is fetched onc
 
 | Field         | How merged |
 | ------------- | ---------- |
-| `rules`       | remote is the base; local key overrides on conflict |
-| `protect`     | union of remote + local (deduped) |
-| `passthrough` | union of remote + local (deduped) |
-| `template`    | local wins; falls back to remote if local is unset |
+| `rules`       | base is the default; local key overrides on conflict |
+| `protect`     | union of base + local (deduped) |
+| `passthrough` | union of base + local (deduped) |
+| `template`    | local wins; falls back to base if local is unset |
 
 **Constraints:**
-- Only `http://` and `https://` URLs are accepted.
-- The remote config's own `extends` field is **ignored** — no recursive fetching.
-- Fetch failure is a fatal error (exits with code 1).
+- Local path: relative paths are resolved from the current working directory (repo root).
+- Remote URL: only `http://` and `https://` are accepted. 10-second timeout.
+- The base config's own `extends` field is **ignored** — no recursive loading.
+- Load failure is a fatal error (exits with code 1).
 
 #### $schema (optional — editor autocompletion)
 
