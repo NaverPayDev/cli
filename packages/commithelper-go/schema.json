@@ -10,6 +10,11 @@
             "type": "string",
             "description": "Path or URL to this schema (enables editor autocompletion)."
         },
+        "extends": {
+            "type": "string",
+            "pattern": "^https?://",
+            "description": "URL of a remote .commithelperrc.json to use as the base config. Must be an http:// or https:// URL. The remote config is fetched and merged with the local config: local values override remote on conflict. Nested extends in the remote config are not followed."
+        },
         "rules": {
             "type": "object",
             "description": "GitHub-style branch prefixes. The key is a branch prefix, matched as `<prefix>/<number>`; the value is the repo to tag (`repo#number`), or null to tag the current repo (`#number`).",
