@@ -6,8 +6,7 @@
     "properties": {
         "extends": {
             "type": "string",
-            "pattern": "^(http|https)://",
-            "description": "Extends remote URL"
+            "description": "Base config to inherit from. Accepts an http:// or https:// URL, or a local file path (e.g. ./node_modules/@my-org/commithelperrc/.commithelperrc.json)."
         },
         "protect": {
             "type": "array",
