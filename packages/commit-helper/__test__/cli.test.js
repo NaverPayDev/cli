@@ -158,3 +158,47 @@ describe('getCommitMessageByBranchName: 우선순위와 멱등', () => {
         expect(getCommitMessageByBranchName(branch, message, rulesMap, pass)).toBe(expected)
     })
 })
+
+// ── extends: loadExtendsConfig ────────────────────────────────────────────────
+
+import {loadExtendsConfig} from '../bin/cli.js'
+import {writeFile, mkdtemp, rm} from 'fs/promises'
+import {tmpdir} from 'os'
+import {join} from 'path'
+
+describe('loadExtendsConfig — local file path', () => {
+    let dir
+
+    beforeEach(async () => {
+        dir = await mkdtemp(join(tmpdir(), 'commithelper-test-'))
+    })
+
+    afterEach(async () => {
+        await rm(dir, {recursive: true, force: true})
+    })
+
+    it('로컬 파일의 rules, protect, passthrough를 파싱한다', async () => {
+        const config = {
+            rules: {plan: 'org/plan', qa: 'org/qa'},
+            protect: ['main', 'master'],
+            passthrough: ['PROJ'],
+        }
+        const filePath = join(dir, '.commithelperrc.json')
+        await writeFile(filePath, JSON.stringify(config))
+
+        const result = await loadExtendsConfig(filePath)
+        expect(result.rules).toEqual(config.rules)
+        expect(result.protect).toEqual(config.protect)
+        expect(result.passthrough).toEqual(config.passthrough)
+    })
+
+    it('파일이 없으면 에러를 던진다', async () => {
+        await expect(loadExtendsConfig(join(dir, 'not-exist.json'))).rejects.toThrow()
+    })
+
+    it('유효하지 않은 JSON이면 에러를 던진다', async () => {
+        const filePath = join(dir, '.commithelperrc.json')
+        await writeFile(filePath, 'not json')
+        await expect(loadExtendsConfig(filePath)).rejects.toThrow()
+    })
+})

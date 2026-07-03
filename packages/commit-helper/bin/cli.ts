@@ -146,6 +146,21 @@ interface Config {
     passthrough?: string[]
 }
 
+// loadExtendsConfig dispatches to HTTP fetch or local file read based on the extends value.
+export async function loadExtendsConfig(extendsValue: string): Promise<Partial<Config>> {
+    if (/^https?:\/\//.test(extendsValue)) {
+        const response = await fetch(extendsValue)
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`)
+        }
+        return response.json() as Promise<Partial<Config>>
+    }
+    // local file path — relative paths resolved from cwd (repo root)
+    const filePath = isAbsolute(extendsValue) ? extendsValue : join(process.cwd(), extendsValue)
+    const content = await fs.readFile(filePath, 'utf8')
+    return JSON.parse(content) as Partial<Config>
+}
+
 export async function readExternalConfig(): Promise<Config> {
     const explorerSync = cosmiconfigSync('commithelper')
     const searchedFor = explorerSync.search()
@@ -160,15 +175,10 @@ export async function readExternalConfig(): Promise<Config> {
     let mergedProtect: string[] = Array.isArray(localConfig.protect) ? [...localConfig.protect] : []
     let mergedPassthrough: string[] = Array.isArray(localConfig.passthrough) ? [...localConfig.passthrough] : []
 
-    const extendsUrl = localConfig.extends
-    if (typeof extendsUrl === 'string' && /^(http|https):\/\//.test(extendsUrl)) {
+    const extendsValue = localConfig.extends
+    if (typeof extendsValue === 'string' && extendsValue.trim() !== '') {
         try {
-            const response = await fetch(extendsUrl)
-            if (!response.ok) {
-                throw new Error(`Failed to fetch extends config: ${response.status} ${response.statusText}`)
-            }
-
-            const extendsConfig = (await response.json()) as Partial<Config>
+            const extendsConfig = await loadExtendsConfig(extendsValue)
 
             if (extendsConfig.rules && typeof extendsConfig.rules === 'object') {
                 Object.assign(mergedRules, extendsConfig.rules)
@@ -182,7 +192,7 @@ export async function readExternalConfig(): Promise<Config> {
                 mergedPassthrough = [...extendsConfig.passthrough, ...mergedPassthrough]
             }
         } catch (e) {
-            throw new Error(`Failed to load external config from "${extendsUrl}": ${(e as Error).message}`)
+            throw new Error(`Failed to load extends config from "${extendsValue}": ${(e as Error).message}`)
         }
     }
 

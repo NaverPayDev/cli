@@ -114,11 +114,34 @@ git commit -m "새로운 기능 추가"
 
 #### `extends` (문자열)
 
-설정을 상속받을 URL:
+공유 베이스 설정을 상속받을 **HTTP/HTTPS URL** 또는 **로컬 파일 경로**:
+
+**원격 URL:**
 
 ```json
 {
     "extends": "https://raw.githubusercontent.com/naverpay/standards/main/.commithelperrc.json"
+}
+```
+
+**로컬 파일 경로** (사내 레지스트리 등 인증이 필요한 환경에서 권장):
+
+```json
+{
+    "extends": "./node_modules/@my-org/commithelperrc/.commithelperrc.json"
+}
+```
+
+공유 설정을 npm 패키지로 배포하고 devDependency로 설치한 뒤 로컬 경로로 참조합니다. 오프라인에서도 동작하고, `package.json`으로 버전 관리되며, 별도 인증이 필요 없습니다.
+
+각 레포는 고유 설정만 선언하면 됩니다:
+
+```json
+{
+    "extends": "./node_modules/@my-org/commithelperrc/.commithelperrc.json",
+    "rules": {
+        "my-feature": "my-org/my-repo"
+    }
 }
 ```
 
