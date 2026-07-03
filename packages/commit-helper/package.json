@@ -1,6 +1,6 @@
 {
     "name": "@naverpay/commit-helper",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "help your commit in git",
     "main": "./dist/index.js",
     "repository": {
