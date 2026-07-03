@@ -114,13 +114,28 @@ Key recognition matches [Jigit](https://marketplace.atlassian.com/apps/1217129) 
 
 #### `extends` (string)
 
-URL to inherit configuration from:
+Base config to inherit from. Accepts an **HTTP/HTTPS URL** or a **local file path**:
+
+**Remote URL:**
 
 ```json
 {
     "extends": "https://raw.githubusercontent.com/naverpay/standards/main/.commithelperrc.json"
 }
 ```
+
+**Local file path** (recommended for private registries — install shared config as a dev dependency):
+
+```json
+{
+    "extends": "./node_modules/@my-org/commithelperrc/.commithelperrc.json",
+    "rules": {
+        "my-feature": "my-org/my-repo"
+    }
+}
+```
+
+Works offline, versioned through `package.json`, no auth required.
 
 ## Examples
 
