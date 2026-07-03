@@ -1,6 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -282,6 +287,360 @@ func TestProcessMessage(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("processMessage(%q, %q) = %q, want %q", tt.message, tt.branch, got, tt.want)
+			}
+		})
+	}
+}
+
+// ── extends: mergeConfigs ─────────────────────────────────────────────────────
+
+func TestMergeConfigs_Rules(t *testing.T) {
+	t.Run("local overrides base on same key", func(t *testing.T) {
+		base := Config{Rules: map[string]*string{"feature": strPtr("base/repo")}}
+		local := Config{Rules: map[string]*string{"feature": strPtr("local/repo")}}
+		merged := mergeConfigs(base, local)
+		if got := *merged.Rules["feature"]; got != "local/repo" {
+			t.Errorf("got %q, want %q", got, "local/repo")
+		}
+	})
+
+	t.Run("local null overrides base non-null", func(t *testing.T) {
+		base := Config{Rules: map[string]*string{"feature": strPtr("base/repo")}}
+		local := Config{Rules: map[string]*string{"feature": nil}}
+		merged := mergeConfigs(base, local)
+		if merged.Rules["feature"] != nil {
+			t.Errorf("expected nil, got %q", *merged.Rules["feature"])
+		}
+	})
+
+	t.Run("base rules preserved when not overridden", func(t *testing.T) {
+		base := Config{Rules: map[string]*string{"plan": strPtr("org/plan"), "qa": strPtr("org/qa")}}
+		local := Config{Rules: map[string]*string{"repo": nil}}
+		merged := mergeConfigs(base, local)
+		if _, ok := merged.Rules["plan"]; !ok {
+			t.Error("expected plan rule from base")
+		}
+		if _, ok := merged.Rules["qa"]; !ok {
+			t.Error("expected qa rule from base")
+		}
+		if _, ok := merged.Rules["repo"]; !ok {
+			t.Error("expected repo rule from local")
+		}
+	})
+
+	t.Run("nil local rules treated as empty", func(t *testing.T) {
+		base := Config{Rules: map[string]*string{"plan": strPtr("org/plan")}}
+		local := Config{}
+		merged := mergeConfigs(base, local)
+		if _, ok := merged.Rules["plan"]; !ok {
+			t.Error("expected plan rule from base")
+		}
+	})
+}
+
+func TestMergeConfigs_Protect(t *testing.T) {
+	t.Run("union of base and local", func(t *testing.T) {
+		base := Config{Protect: []string{"main", "master"}}
+		local := Config{Protect: []string{"release/*"}}
+		merged := mergeConfigs(base, local)
+		want := map[string]bool{"main": true, "master": true, "release/*": true}
+		if len(merged.Protect) != 3 {
+			t.Errorf("got %d protect entries, want 3: %v", len(merged.Protect), merged.Protect)
+		}
+		for _, p := range merged.Protect {
+			if !want[p] {
+				t.Errorf("unexpected protect entry %q", p)
+			}
+		}
+	})
+
+	t.Run("deduplicates overlapping entries", func(t *testing.T) {
+		base := Config{Protect: []string{"main", "master"}}
+		local := Config{Protect: []string{"main", "release/*"}}
+		merged := mergeConfigs(base, local)
+		count := 0
+		for _, p := range merged.Protect {
+			if p == "main" {
+				count++
+			}
+		}
+		if count != 1 {
+			t.Errorf("main appears %d times, want 1", count)
+		}
+	})
+
+	t.Run("base-only protect preserved", func(t *testing.T) {
+		base := Config{Protect: []string{"main"}}
+		local := Config{}
+		merged := mergeConfigs(base, local)
+		if len(merged.Protect) != 1 || merged.Protect[0] != "main" {
+			t.Errorf("got %v, want [main]", merged.Protect)
+		}
+	})
+}
+
+func TestMergeConfigs_Passthrough(t *testing.T) {
+	t.Run("union of base and local", func(t *testing.T) {
+		base := Config{Passthrough: []string{"PROJ", "OPS"}}
+		local := Config{Passthrough: []string{"FEAT"}}
+		merged := mergeConfigs(base, local)
+		want := map[string]bool{"PROJ": true, "OPS": true, "FEAT": true}
+		if len(merged.Passthrough) != 3 {
+			t.Errorf("got %d passthrough entries, want 3: %v", len(merged.Passthrough), merged.Passthrough)
+		}
+		for _, p := range merged.Passthrough {
+			if !want[p] {
+				t.Errorf("unexpected passthrough entry %q", p)
+			}
+		}
+	})
+
+	t.Run("deduplicates overlapping entries", func(t *testing.T) {
+		base := Config{Passthrough: []string{"PROJ"}}
+		local := Config{Passthrough: []string{"PROJ", "OPS"}}
+		merged := mergeConfigs(base, local)
+		count := 0
+		for _, p := range merged.Passthrough {
+			if p == "PROJ" {
+				count++
+			}
+		}
+		if count != 1 {
+			t.Errorf("PROJ appears %d times, want 1", count)
+		}
+	})
+}
+
+func TestMergeConfigs_Template(t *testing.T) {
+	t.Run("local template wins", func(t *testing.T) {
+		base := Config{Template: strPtr("base: {{.Message}}")}
+		local := Config{Template: strPtr("local: {{.Message}}")}
+		merged := mergeConfigs(base, local)
+		if *merged.Template != "local: {{.Message}}" {
+			t.Errorf("got %q, want local template", *merged.Template)
+		}
+	})
+
+	t.Run("base template used when local is nil", func(t *testing.T) {
+		base := Config{Template: strPtr("base: {{.Message}}")}
+		local := Config{}
+		merged := mergeConfigs(base, local)
+		if merged.Template == nil || *merged.Template != "base: {{.Message}}" {
+			t.Errorf("expected base template, got %v", merged.Template)
+		}
+	})
+
+	t.Run("both nil stays nil", func(t *testing.T) {
+		merged := mergeConfigs(Config{}, Config{})
+		if merged.Template != nil {
+			t.Errorf("expected nil template, got %q", *merged.Template)
+		}
+	})
+}
+
+// ── extends: fetchExtendsConfig ───────────────────────────────────────────────
+
+func TestFetchExtendsConfig(t *testing.T) {
+	t.Run("valid remote config is fetched and parsed", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{
+				"protect": ["main", "master"],
+				"rules": {"plan": "org/plan", "qa": "org/qa"},
+				"passthrough": ["PROJ"]
+			}`)
+		}))
+		defer srv.Close()
+
+		cfg, err := fetchExtendsConfig(srv.URL)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(cfg.Protect) != 2 {
+			t.Errorf("protect: got %v, want [main master]", cfg.Protect)
+		}
+		if repo, ok := cfg.Rules["plan"]; !ok || *repo != "org/plan" {
+			t.Errorf("rules[plan]: got %v", cfg.Rules["plan"])
+		}
+		if len(cfg.Passthrough) != 1 || cfg.Passthrough[0] != "PROJ" {
+			t.Errorf("passthrough: got %v, want [PROJ]", cfg.Passthrough)
+		}
+	})
+
+	t.Run("non-http URL is rejected", func(t *testing.T) {
+		_, err := fetchExtendsConfig("file:///etc/passwd")
+		if err == nil {
+			t.Error("expected error for non-http URL, got nil")
+		}
+	})
+
+	t.Run("HTTP error status is rejected", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer srv.Close()
+
+		_, err := fetchExtendsConfig(srv.URL)
+		if err == nil {
+			t.Error("expected error for 404, got nil")
+		}
+	})
+
+	t.Run("invalid JSON is rejected", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, `not json`)
+		}))
+		defer srv.Close()
+
+		_, err := fetchExtendsConfig(srv.URL)
+		if err == nil {
+			t.Error("expected error for invalid JSON, got nil")
+		}
+	})
+
+	t.Run("extends field in remote config is not followed (no recursion)", func(t *testing.T) {
+		// Remote config has its own "extends" — it must be ignored.
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, `{"extends":"http://should-not-be-called","rules":{"plan":"org/plan"}}`)
+		}))
+		defer srv.Close()
+
+		cfg, err := fetchExtendsConfig(srv.URL)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Just verify the config was parsed; the nested extends is not followed
+		if _, ok := cfg.Rules["plan"]; !ok {
+			t.Error("expected plan rule from remote")
+		}
+	})
+}
+
+// ── extends: readLocalConfig ──────────────────────────────────────────────────
+
+func TestReadLocalConfig(t *testing.T) {
+	t.Run("valid local file is read and parsed", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, ".commithelperrc.json")
+		content := `{"protect":["main"],"rules":{"plan":"org/plan"},"passthrough":["PROJ"]}`
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatalf("failed to write temp file: %v", err)
+		}
+
+		cfg, err := readLocalConfig(path)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(cfg.Protect) != 1 || cfg.Protect[0] != "main" {
+			t.Errorf("protect: got %v, want [main]", cfg.Protect)
+		}
+		if repo, ok := cfg.Rules["plan"]; !ok || *repo != "org/plan" {
+			t.Errorf("rules[plan]: unexpected %v", cfg.Rules["plan"])
+		}
+		if len(cfg.Passthrough) != 1 || cfg.Passthrough[0] != "PROJ" {
+			t.Errorf("passthrough: got %v, want [PROJ]", cfg.Passthrough)
+		}
+	})
+
+	t.Run("missing file returns error", func(t *testing.T) {
+		_, err := readLocalConfig("/nonexistent/path/.commithelperrc.json")
+		if err == nil {
+			t.Error("expected error for missing file, got nil")
+		}
+	})
+
+	t.Run("invalid JSON returns error", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, ".commithelperrc.json")
+		if err := os.WriteFile(path, []byte("not json"), 0644); err != nil {
+			t.Fatalf("failed to write temp file: %v", err)
+		}
+		_, err := readLocalConfig(path)
+		if err == nil {
+			t.Error("expected error for invalid JSON, got nil")
+		}
+	})
+}
+
+func TestLoadExtendsConfig(t *testing.T) {
+	t.Run("http URL dispatches to fetchExtendsConfig", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, `{"rules":{"plan":"org/plan"}}`)
+		}))
+		defer srv.Close()
+
+		cfg, err := loadExtendsConfig(srv.URL)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if _, ok := cfg.Rules["plan"]; !ok {
+			t.Error("expected plan rule from http extends")
+		}
+	})
+
+	t.Run("local path dispatches to readLocalConfig", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, ".commithelperrc.json")
+		if err := os.WriteFile(path, []byte(`{"rules":{"qa":"org/qa"}}`), 0644); err != nil {
+			t.Fatalf("failed to write temp file: %v", err)
+		}
+
+		cfg, err := loadExtendsConfig(path)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if _, ok := cfg.Rules["qa"]; !ok {
+			t.Error("expected qa rule from local extends")
+		}
+	})
+}
+
+// ── extends: end-to-end merge via processMessage ─────────────────────────────
+
+func TestProcessMessage_WithExtends(t *testing.T) {
+	// Simulate what loadConfig produces after merging a remote base config.
+	// Base (remote): plan → org/plan, protect: main
+	// Local: qa → org/qa, protect: release/*
+	// Merged result should have all of them.
+	merged := mergeConfigs(
+		Config{
+			Rules:   map[string]*string{"plan": strPtr("org/plan")},
+			Protect: []string{"main"},
+		},
+		Config{
+			Rules:   map[string]*string{"qa": strPtr("org/qa")},
+			Protect: []string{"release/*"},
+		},
+	)
+
+	tests := []struct {
+		name      string
+		message   string
+		branch    string
+		want      string
+		wantError bool
+	}{
+		{"base rule still works", "fix", "plan/42", "[org/plan#42] fix", false},
+		{"local rule works", "fix", "qa/99", "[org/qa#99] fix", false},
+		{"base protect blocks", "fix", "main", "", true},
+		{"local protect blocks", "fix", "release/1.0", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := processMessage(tt.message, tt.branch, merged)
+			if tt.wantError {
+				if err == nil {
+					t.Fatalf("expected error, got nil (result %q)", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
 			}
 		})
 	}

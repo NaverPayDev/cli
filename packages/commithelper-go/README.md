@@ -103,6 +103,49 @@ This is Basic rule of `.commithelperrc.json`.
 }
 ```
 
+#### extends
+
+Inherit a shared base config. Accepts an **HTTP/HTTPS URL** or a **local file path** — useful for teams managing many repositories with a common set of rules.
+
+**Local file path (recommended for private registries):**
+
+```json
+{
+    "extends": "./node_modules/@my-org/commithelperrc/.commithelperrc.json",
+    "rules": {
+        "my-feature": "my-org/my-repo"
+    }
+}
+```
+
+Install the shared config as a dev dependency and reference it via a relative path. Works offline, versioned through `package.json`, no auth required.
+
+**Remote URL:**
+
+```json
+{
+    "extends": "https://raw.githubusercontent.com/my-org/.github/main/.commithelperrc.json",
+    "rules": {
+        "my-feature": "my-org/my-repo"
+    }
+}
+```
+
+**Merge strategy** (local always wins on conflict):
+
+| Field         | How merged |
+| ------------- | ---------- |
+| `rules`       | base is the default; local key overrides on conflict |
+| `protect`     | union of base + local (deduped) |
+| `passthrough` | union of base + local (deduped) |
+| `template`    | local wins; falls back to base if local is unset |
+
+**Constraints:**
+- Local path: relative paths are resolved from the current working directory (repo root).
+- Remote URL: only `http://` and `https://` are accepted. 10-second timeout.
+- The base config's own `extends` field is **ignored** — no recursive loading.
+- Load failure is a fatal error (exits with code 1).
+
 #### $schema (optional — editor autocompletion)
 
 Add a `$schema` reference so your editor offers autocompletion, inline docs, and validation while editing `.commithelperrc.json`. The schema ships inside the installed package, so a relative path works offline (no CDN, Nexus-friendly):

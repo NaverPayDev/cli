@@ -5,15 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"regexp"
 	"strings"
 	"text/template"
+	"time"
 )
 
 type Config struct {
+	Extends     *string            `json:"extends,omitempty"`
 	Rules       map[string]*string `json:"rules"`
 	Passthrough []string           `json:"passthrough"`
 	Protect     []string           `json:"protect"`
@@ -218,7 +221,114 @@ func loadConfig() Config {
 		os.Exit(1)
 	}
 
+	if config.Extends != nil && *config.Extends != "" {
+		baseConfig, err := loadExtendsConfig(*config.Extends)
+		if err != nil {
+			fmt.Printf("Error loading extends config: %v\n", err)
+			os.Exit(1)
+		}
+		config = mergeConfigs(baseConfig, config)
+	}
+
 	return config
+}
+
+// loadExtendsConfig dispatches to fetchExtendsConfig (HTTP/HTTPS) or
+// readLocalConfig (local file path) based on the extends value.
+func loadExtendsConfig(extends string) (Config, error) {
+	if strings.HasPrefix(extends, "http://") || strings.HasPrefix(extends, "https://") {
+		return fetchExtendsConfig(extends)
+	}
+	return readLocalConfig(extends)
+}
+
+// fetchExtendsConfig fetches and parses a remote .commithelperrc.json via HTTP/HTTPS.
+func fetchExtendsConfig(url string) (Config, error) {
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to fetch extends config from %q: %w", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return Config{}, fmt.Errorf("failed to fetch extends config from %q: HTTP %s", url, resp.Status)
+	}
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to read extends config from %q: %w", url, err)
+	}
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return Config{}, fmt.Errorf("failed to parse extends config from %q: %w", url, err)
+	}
+	return cfg, nil
+}
+
+// readLocalConfig reads and parses a .commithelperrc.json from a local file path.
+// Relative paths are resolved from the current working directory.
+func readLocalConfig(filePath string) (Config, error) {
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to read extends config from %q: %w", filePath, err)
+	}
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return Config{}, fmt.Errorf("failed to parse extends config from %q: %w", filePath, err)
+	}
+	return cfg, nil
+}
+
+// mergeConfigs merges base (remote extends) and local configs.
+// Merge strategy:
+//   - rules:       base is the default; local overrides on key conflict
+//   - protect:     union of base + local (deduped)
+//   - passthrough: union of base + local (deduped)
+//   - template:    local wins; falls back to base if local is unset
+func mergeConfigs(base, local Config) Config {
+	merged := Config{
+		Rules:    make(map[string]*string),
+		Template: local.Template,
+	}
+	if merged.Template == nil {
+		merged.Template = base.Template
+	}
+
+	for k, v := range base.Rules {
+		merged.Rules[k] = v
+	}
+	for k, v := range local.Rules {
+		merged.Rules[k] = v
+	}
+
+	seen := make(map[string]bool)
+	for _, p := range base.Protect {
+		if !seen[p] {
+			merged.Protect = append(merged.Protect, p)
+			seen[p] = true
+		}
+	}
+	for _, p := range local.Protect {
+		if !seen[p] {
+			merged.Protect = append(merged.Protect, p)
+			seen[p] = true
+		}
+	}
+
+	seenPT := make(map[string]bool)
+	for _, p := range base.Passthrough {
+		if !seenPT[p] {
+			merged.Passthrough = append(merged.Passthrough, p)
+			seenPT[p] = true
+		}
+	}
+	for _, p := range local.Passthrough {
+		if !seenPT[p] {
+			merged.Passthrough = append(merged.Passthrough, p)
+			seenPT[p] = true
+		}
+	}
+
+	return merged
 }
 
 func applyTemplate(config Config, data *TemplateData) string {

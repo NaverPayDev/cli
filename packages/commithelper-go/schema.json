@@ -10,6 +10,10 @@
             "type": "string",
             "description": "Path or URL to this schema (enables editor autocompletion)."
         },
+        "extends": {
+            "type": "string",
+            "description": "Base config to inherit from. Accepts an http:// or https:// URL, or a local file path (e.g. ./node_modules/@my-org/commithelperrc/.commithelperrc.json). The base config is merged with the local config: local values override base on conflict. Nested extends in the base config are not followed."
+        },
         "rules": {
             "type": "object",
             "description": "GitHub-style branch prefixes. The key is a branch prefix, matched as `<prefix>/<number>`; the value is the repo to tag (`repo#number`), or null to tag the current repo (`#number`).",
