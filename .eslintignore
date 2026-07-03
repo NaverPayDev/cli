@@ -63,3 +63,7 @@ dist
 apps/docs/docs
 
 .changeset/*
+
+# Test files
+**/*.test.js
+**/*.test.ts
